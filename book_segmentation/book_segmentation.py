@@ -91,7 +91,7 @@ def remove_duplicate_lines(sorted_points, horizontal=False):
     return non_duplicate_points
 
 
-def get_points_in_x_and_y(
+def convert_to_xy(
     hough_lines: np.ndarray,
     max_length: int = 2000,
 ) -> List[Tuple]:
@@ -121,7 +121,7 @@ def get_points_in_x_and_y(
     return points
 
 
-def draw_spine_lines(img: np.ndarray, horizontal: bool = False) -> np.ndarray:
+def draw_hough_lines(img: np.ndarray, horizontal: bool = False) -> np.ndarray:
     """이미지에 Hough Line을 그린다.
 
     Args:
@@ -131,7 +131,7 @@ def draw_spine_lines(img: np.ndarray, horizontal: bool = False) -> np.ndarray:
     Returns:
         np.ndarray: 출력 이미지
     """
-    final_points = detect_spines(img, horizontal=horizontal)
+    final_points = get_hough_lines(img, horizontal=horizontal)
     for point in final_points:
         ((x1, y1), (x2, y2)) = point
         final_image = cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
@@ -176,7 +176,7 @@ def leave_verticals_only(lines: np.ndarray) -> np.ndarray:
     return verticals
 
 
-def detect_spines(img: np.ndarray, horizontal: bool = False):
+def get_hough_lines(img: np.ndarray, horizontal: bool = False):
     """
     Returns a list of lines seperating
     the detected spines in the image
@@ -201,7 +201,7 @@ def detect_spines(img: np.ndarray, horizontal: bool = False):
     lines = cv2.HoughLines(img_erosion, 1, np.pi / 180, 200 if horizontal else 90)
     if lines is None:
         return []
-    points = get_points_in_x_and_y(lines)
+    points = convert_to_xy(lines)
     points.sort(key=lambda val: val[0][0])
     points = remove_duplicate_lines(points, horizontal=horizontal)
 
@@ -225,5 +225,5 @@ if __name__ == "__main__":
     for i, path in enumerate(paths, 1):
         np_image = read_image(path)
         resized = resize_img(np_image, target_height=1000)
-        img_with_line = draw_spine_lines(resized, horizontal=False)
+        img_with_line = draw_hough_lines(resized, horizontal=False)
         show_image(img_with_line, filename=f"out{i}", save=True)
