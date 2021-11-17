@@ -267,6 +267,7 @@ if __name__ == "__main__":
         "sample_inputs/sample1.jpeg",
         "sample_inputs/sample2.jpeg",
         "sample_inputs/sample3.jpeg",
+        "sample_inputs/sample4.jpeg",
     ]
     for i, path in enumerate(paths, 1):
         np_image = read_image(path)
