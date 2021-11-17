@@ -12,7 +12,7 @@ class RowImage:
         """
         self.img = img
         self.relative_floor = relative_floor
-        self.absolute_floor = -1  # 생성 시점에서는 absolute_floor 정보를 알 수 없다.
+        self.absolute_floor = None  # 생성 시점에서는 absolute_floor 정보를 알 수 없다.
 
     def update_absolute_floor(self, value: int):
         self.absolute_floor = value
