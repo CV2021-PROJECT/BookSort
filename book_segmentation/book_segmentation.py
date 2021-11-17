@@ -26,7 +26,7 @@ def trim_lines(points: list, y_max: int, x_max: int):
         try:
             m = (y2 - y1) / (x2 - x1)
         except ZeroDivisionError:
-            shortened_points.append(((x1, y_max), (x1, 0)))
+            shortened_points.append(((x1, 0), (x1, y_max)))
             continue
 
         if abs(m) > slope_threshold:
@@ -56,7 +56,11 @@ def trim_lines(points: list, y_max: int, x_max: int):
             else:
                 start_point = (0, 0)
                 end_point(x_max, y_max)
-        shortened_points.append((start_point, end_point))
+
+        if start_point[1] < end_point[1]:
+            shortened_points.append((start_point, end_point))
+        else:
+            shortened_points.append((end_point, start_point))
     return shortened_points
 
 
@@ -76,7 +80,7 @@ def remove_duplicate_lines(sorted_points, horizontal=False):
                 non_duplicate_points.append(point)
                 last_x1 = x1
 
-            elif abs(last_x1 - x1) >= 25:
+            elif abs(last_x1 - x1) >= 15:
                 non_duplicate_points.append(point)
                 last_x1 = x1
         else:
@@ -94,7 +98,7 @@ def remove_duplicate_lines(sorted_points, horizontal=False):
 def convert_to_xy(
     hough_lines: np.ndarray,
     max_length: int = 2000,
-) -> List[Tuple]:
+) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
     """rho, theta로 표현된 Hough Line을 ((x1, y1), (x2, y2)) 꼴의 선분 집합으로 변환한다.
 
     Args:
@@ -115,9 +119,9 @@ def convert_to_xy(
         y1 = int(y0 + max_length * a)
         x2 = int(x0 + max_length * b)
         y2 = int(y0 - max_length * a)
-        start = (x1, y1)
-        end = (x2, y2)
-        points.append((start, end))
+        point1 = (x1, y1)
+        point2 = (x2, y2)
+        points.append((point1, point2))
     return points
 
 
@@ -211,8 +215,50 @@ def get_hough_lines(img: np.ndarray, horizontal: bool = False):
         points = leave_verticals_only(points)
 
     points = trim_lines(points, height, width)
+    points = finalize_lines(points)
 
     return points
+
+
+def finalize_lines(lines: list) -> list:
+    """Book Spine 경계를 확정한다.
+
+    Args:
+        lines (list): 선분들의 집합
+
+    Returns:
+        list: 선분들의 집합. 경계 당 딱 하나만.
+    """
+    finalized = []
+
+    lines.sort(key=lambda val: val[0][0])  # 시작점(위쪽)의 x좌표 기준으로 정렬
+    for i in range(len(lines) - 1):
+        line1, line2 = lines[i], lines[i + 1]
+        upper_x_gap = line2[0][0] - line1[0][0]
+        lower_x_gap = line2[1][0] - line1[1][0]
+        if upper_x_gap * lower_x_gap < 0:
+            continue  # 선이 교차하는 경우
+        if upper_x_gap < 10 or lower_x_gap < 10:
+            continue  # 선이 너무 가깝게 붙어있는 경우
+        finalized.append(line1)
+    finalized.append(lines[-1])
+
+    # 한번 더 필터링
+    finalized2 = []
+    for i in range(len(finalized) - 1):
+        line1, line2 = finalized[i], finalized[i + 1]
+        upper_x_gap = line2[0][0] - line1[0][0]
+        lower_x_gap = line2[1][0] - line1[1][0]
+        if upper_x_gap < 20 or lower_x_gap < 20:
+            continue  # 선이 너무 가깝게 붙어있는 경우
+        ratio = upper_x_gap / lower_x_gap
+        if ratio < 1:
+            ratio = 1 / ratio
+        if ratio > 1.7:
+            continue
+        finalized2.append(line1)
+    finalized2.append(finalized[-1])
+    return finalized2
 
 
 #%%
@@ -227,3 +273,5 @@ if __name__ == "__main__":
         resized = resize_img(np_image, target_height=1000)
         img_with_line = draw_hough_lines(resized, horizontal=False)
         show_image(img_with_line, filename=f"out{i}", save=True)
+
+# %%
