@@ -134,7 +134,7 @@ def draw_spine_lines(img: np.ndarray, horizontal: bool = False) -> np.ndarray:
     final_points = detect_spines(img, horizontal=horizontal)
     for point in final_points:
         ((x1, y1), (x2, y2)) = point
-        final_image = cv2.line(final_image, (x1, y1), (x2, y2), (0, 0, 255), 2)
+        final_image = cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
     return final_image
 
@@ -226,4 +226,4 @@ if __name__ == "__main__":
         np_image = read_image(path)
         resized = resize_img(np_image, target_height=1000)
         img_with_line = draw_spine_lines(resized, horizontal=False)
-        show_image(img_with_line, filename=f"out{i}.jpeg", save=True)
+        show_image(img_with_line, filename=f"out{i}", save=True)
