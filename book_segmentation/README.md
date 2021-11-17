@@ -1,4 +1,4 @@
-# Book Segmentation Module
+# Book Segmentation
 
 assigned to 박신홍(@shp7724)
 
