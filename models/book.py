@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from image import RowImage
+from row_image import RowImage
 import numpy as np
 
 
