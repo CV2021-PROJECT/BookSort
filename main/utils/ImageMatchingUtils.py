@@ -1,36 +1,13 @@
 import numpy as np
 import cv2
-from matplotlib import pyplot as plt
 import math
+from ImageUtils import *
 
 FLANN_INDEX_KDTREE = 0
 index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
 search_params = dict(checks=50)
 flann = cv2.FlannBasedMatcher(index_params, search_params)
 
-def crop_polygon(image, vertices):
-    h = image.shape[0]
-    w = image.shape[1]
-
-    mask = np.zeros((h, w)).astype(np.uint8)
-    vertices = np.array([vertices])
-    rect = cv2.boundingRect(vertices)
-    
-    cv2.fillPoly(mask, vertices, 255)
-    cropped = cv2.bitwise_and(image, image, mask = mask)
-    cropped = cropped[rect[1]: rect[1] + rect[3], rect[0]: rect[0] + rect[2]]
-
-    return cropped
-
-def tuple_to_homogeneous(t):
-    return np.expand_dims(np.array(t + (1,)), -1)
-
-def homogeneous_to_tuple(h):
-    assert len(h.shape) in [1,2]
-    if len(h.shape) == 1:
-        return h[:-1] / h[-1]
-    else:
-        return np.squeeze(h[:-1], -1) / h[-1]
 
 def get_inverse(H):
     return np.linalg.inv(H)
@@ -108,17 +85,11 @@ def find_optimal_H(p1, p2, thr):
         N = math.log(1 - 0.999) / math.log(1 - (1-eps) ** 4) if 0 < eps < 1 else float("inf")
         count += 1
         
-    print(num_of_inliers_max)
-    print(inliers_1)
-    print(inliers_2)
+    #print(num_of_inliers_max)
+    #print(inliers_1)
+    #print(inliers_2)
 
     return get_H(inliers_1, inliers_2)
-
-def warp_image(image_in, image_ref, H):
-    warped = cv2.warpPerspective(image_in, H, dsize=(image_ref.shape[1], image_ref.shape[0]))
-    merged = (warped * 0.5 + image_ref * 0.5).astype(np.uint8)
-    
-    return warped, merged
 
 def get_corr_keypoints(img1, img2, thr, verbose=False):
     sift = cv2.xfeatures2d.SIFT_create()

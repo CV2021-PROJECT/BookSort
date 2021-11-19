@@ -7,8 +7,8 @@ class RowImage:
     def __init__(self, img: np.ndarray, relative_floor: int) -> None:
         """
         Args:
-            img (np.ndarray): numpy 배열로 나타낸 이미지 파일
-            relative_floor (int): 상대적 층수
+            img (np.ndarray): numpy 배열로 나타낸 이미지 파일
+            relative_floor (int): 상대적 층수
         """
         self.img = img
         self.relative_floor = relative_floor
