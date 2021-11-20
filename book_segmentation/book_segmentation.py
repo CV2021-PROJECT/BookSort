@@ -268,11 +268,10 @@ if __name__ == "__main__":
         "sample_inputs/sample2.jpeg",
         "sample_inputs/sample3.jpeg",
         "sample_inputs/sample4.jpeg",
+        "sample_inputs/sample5.jpg",
     ]
     for i, path in enumerate(paths, 1):
         np_image = read_image(path)
         resized = resize_img(np_image, target_height=1000)
         img_with_line = draw_hough_lines(resized, horizontal=False)
         show_image(img_with_line, filename=f"out{i}", save=True)
-
-# %%
