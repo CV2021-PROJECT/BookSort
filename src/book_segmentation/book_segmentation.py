@@ -3,7 +3,8 @@ from typing import List, Tuple
 import cv2
 import numpy as np
 import math
-from utils import *
+from models import RowImage, Book
+from helpers import resize_img, read_image, show_image
 
 
 def trim_lines(points: list, y_max: int, x_max: int):
@@ -11,11 +12,11 @@ def trim_lines(points: list, y_max: int, x_max: int):
 
     Args:
         points (list): Hough Line을 나타내는 ((x1, y1), (x2, y2)) 형태의 선분 리스트
-        y_max (int): 세로 방향 범위
+        y_max (int): 세로 방향 범위
         x_max (int): 가로 방향 범위
 
     Returns:
-        list: 범위를 넘어가지 않도록 다듬은 선분들의 리스트
+        list: 범위를 넘어가지 않도록 다듬은 선분들의 리스트
     """
     slope_threshold = y_max / x_max
     shortened_points = []
@@ -26,7 +27,7 @@ def trim_lines(points: list, y_max: int, x_max: int):
         try:
             m = (y2 - y1) / (x2 - x1)
         except ZeroDivisionError:
-            shortened_points.append(((x1, y_max), (x1, 0)))
+            shortened_points.append(((x1, 0), (x1, y_max)))
             continue
 
         if abs(m) > slope_threshold:
@@ -56,7 +57,11 @@ def trim_lines(points: list, y_max: int, x_max: int):
             else:
                 start_point = (0, 0)
                 end_point(x_max, y_max)
-        shortened_points.append((start_point, end_point))
+
+        if start_point[1] < end_point[1]:
+            shortened_points.append((start_point, end_point))
+        else:
+            shortened_points.append((end_point, start_point))
     return shortened_points
 
 
@@ -76,7 +81,7 @@ def remove_duplicate_lines(sorted_points, horizontal=False):
                 non_duplicate_points.append(point)
                 last_x1 = x1
 
-            elif abs(last_x1 - x1) >= 25:
+            elif abs(last_x1 - x1) >= 15:
                 non_duplicate_points.append(point)
                 last_x1 = x1
         else:
@@ -91,10 +96,10 @@ def remove_duplicate_lines(sorted_points, horizontal=False):
     return non_duplicate_points
 
 
-def get_points_in_x_and_y(
+def convert_to_xy(
     hough_lines: np.ndarray,
     max_length: int = 2000,
-) -> List[Tuple]:
+) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
     """rho, theta로 표현된 Hough Line을 ((x1, y1), (x2, y2)) 꼴의 선분 집합으로 변환한다.
 
     Args:
@@ -115,13 +120,13 @@ def get_points_in_x_and_y(
         y1 = int(y0 + max_length * a)
         x2 = int(x0 + max_length * b)
         y2 = int(y0 - max_length * a)
-        start = (x1, y1)
-        end = (x2, y2)
-        points.append((start, end))
+        point1 = (x1, y1)
+        point2 = (x2, y2)
+        points.append((point1, point2))
     return points
 
 
-def draw_spine_lines(img: np.ndarray, horizontal: bool = False) -> np.ndarray:
+def draw_hough_lines(img: np.ndarray, horizontal: bool = False) -> np.ndarray:
     """이미지에 Hough Line을 그린다.
 
     Args:
@@ -131,10 +136,10 @@ def draw_spine_lines(img: np.ndarray, horizontal: bool = False) -> np.ndarray:
     Returns:
         np.ndarray: 출력 이미지
     """
-    final_points = detect_spines(img, horizontal=horizontal)
+    final_points = get_hough_lines(img, horizontal=horizontal)
     for point in final_points:
         ((x1, y1), (x2, y2)) = point
-        final_image = cv2.line(final_image, (x1, y1), (x2, y2), (0, 0, 255), 2)
+        final_image = cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
     return final_image
 
@@ -176,7 +181,7 @@ def leave_verticals_only(lines: np.ndarray) -> np.ndarray:
     return verticals
 
 
-def detect_spines(img: np.ndarray, horizontal: bool = False):
+def get_hough_lines(img: np.ndarray, horizontal: bool = False):
     """
     Returns a list of lines seperating
     the detected spines in the image
@@ -201,7 +206,7 @@ def detect_spines(img: np.ndarray, horizontal: bool = False):
     lines = cv2.HoughLines(img_erosion, 1, np.pi / 180, 200 if horizontal else 90)
     if lines is None:
         return []
-    points = get_points_in_x_and_y(lines)
+    points = convert_to_xy(lines)
     points.sort(key=lambda val: val[0][0])
     points = remove_duplicate_lines(points, horizontal=horizontal)
 
@@ -211,19 +216,72 @@ def detect_spines(img: np.ndarray, horizontal: bool = False):
         points = leave_verticals_only(points)
 
     points = trim_lines(points, height, width)
+    points = finalize_lines(points)
 
     return points
+
+
+def finalize_lines(lines: list) -> list:
+    """Book Spine 경계를 확정한다.
+
+    Args:
+        lines (list): 선분들의 집합
+
+    Returns:
+        list: 선분들의 집합. 경계 당 딱 하나만.
+    """
+    finalized = []
+
+    lines.sort(key=lambda val: val[0][0])  # 시작점(위쪽)의 x좌표 기준으로 정렬
+    for i in range(len(lines) - 1):
+        line1, line2 = lines[i], lines[i + 1]
+        upper_x_gap = line2[0][0] - line1[0][0]
+        lower_x_gap = line2[1][0] - line1[1][0]
+        if upper_x_gap * lower_x_gap < 0:
+            continue  # 선이 교차하는 경우
+        if upper_x_gap < 10 or lower_x_gap < 10:
+            continue  # 선이 너무 가깝게 붙어있는 경우
+        finalized.append(line1)
+    finalized.append(lines[-1])
+
+    # 한번 더 필터링
+    finalized2 = []
+    for i in range(len(finalized) - 1):
+        line1, line2 = finalized[i], finalized[i + 1]
+        print(np.array(line1))
+        upper_x_gap = line2[0][0] - line1[0][0]
+        lower_x_gap = line2[1][0] - line1[1][0]
+        if upper_x_gap < 20 or lower_x_gap < 20:
+            continue  # 선이 너무 가깝게 붙어있는 경우
+        ratio = upper_x_gap / lower_x_gap
+        if ratio < 1:
+            ratio = 1 / ratio
+        if ratio > 1.7:
+            continue
+        finalized2.append(line1)
+    finalized2.append(finalized[-1])
+    return finalized2
+
+
+def book_segmentation(image_list: List[RowImage]) -> List[Book]:
+    for image in image_list:
+        resized = resize_img(image.img, target_height=1000)
+        lines = get_hough_lines(resized, horizontal=False)
+        for i in range(len(lines) - 1):
+            line1, line2 = lines[i], lines[i + 1]
 
 
 #%%
 if __name__ == "__main__":
     paths = [
-        "sample_inputs/sample1.jpeg",
-        "sample_inputs/sample2.jpeg",
-        "sample_inputs/sample3.jpeg",
+        "./sample_inputs/sample1.jpeg",
+        "./sample_inputs/sample2.jpeg",
+        "./sample_inputs/sample3.jpeg",
+        "./sample_inputs/sample4.jpeg",
+        "./sample_inputs/sample5.jpg",
     ]
     for i, path in enumerate(paths, 1):
         np_image = read_image(path)
         resized = resize_img(np_image, target_height=1000)
-        img_with_line = draw_spine_lines(resized, horizontal=False)
-        show_image(img_with_line, filename=f"out{i}.jpeg", save=True)
+        img_with_line = draw_hough_lines(resized, horizontal=False)
+        show_image(img_with_line, filename=f"out{i}", save=True)
