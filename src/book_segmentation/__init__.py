@@ -1,1 +1,1 @@
-from .book_segmentation import book_segmentation
+from .book_segmentation import get_books_list

@@ -57,6 +57,13 @@ def trim_lines(points: list, y_max: int, x_max: int):
             else:
                 start_point = (0, 0)
                 end_point(x_max, y_max)
+        if (
+            start_point[0] > x_max
+            or end_point[0] > x_max
+            or start_point[1] > y_max
+            or end_point[1] > y_max
+        ):
+            continue
 
         if start_point[1] < end_point[1]:
             shortened_points.append((start_point, end_point))
@@ -127,7 +134,7 @@ def convert_to_xy(
 
 
 def draw_hough_lines(img: np.ndarray, horizontal: bool = False) -> np.ndarray:
-    """이미지에 Hough Line을 그린다.
+    """이미지에서 Hough Line을 찾고 그린다.
 
     Args:
         img (np.ndarray): 입력 이미지
@@ -142,6 +149,14 @@ def draw_hough_lines(img: np.ndarray, horizontal: bool = False) -> np.ndarray:
         final_image = cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
     return final_image
+
+
+def draw_lines_on_image(img: np.ndarray, lines: np.ndarray) -> np.ndarray:
+    canvas = img.copy()
+    for line in lines:
+        ((x1, y1), (x2, y2)) = line
+        canvas = cv2.line(canvas, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    return canvas
 
 
 def leave_horizontals_only(lines: np.ndarray) -> np.ndarray:
@@ -248,7 +263,6 @@ def finalize_lines(lines: list) -> list:
     finalized2 = []
     for i in range(len(finalized) - 1):
         line1, line2 = finalized[i], finalized[i + 1]
-        print(np.array(line1))
         upper_x_gap = line2[0][0] - line1[0][0]
         lower_x_gap = line2[1][0] - line1[1][0]
         if upper_x_gap < 20 or lower_x_gap < 20:
@@ -263,16 +277,24 @@ def finalize_lines(lines: list) -> list:
     return finalized2
 
 
-def book_segmentation(image_list: List[RowImage]) -> List[Book]:
+def get_books_list(image_list: List[RowImage]) -> List[Book]:
+    books = []
     for image in image_list:
         resized = resize_img(image.img, target_height=1000)
         lines = get_hough_lines(resized, horizontal=False)
+        # image_with_line = draw_lines_on_image(img=resized, lines=lines)
+        # show_image(image_with_line)
         for i in range(len(lines) - 1):
             line1, line2 = lines[i], lines[i + 1]
+            corner = np.vstack((np.array(line1), np.array(line2)))
+            new_book = Book(row_image=image, corner=corner)
+            books.append(new_book)
+    return books
 
 
 #%%
 if __name__ == "__main__":
+    # Prepare RowImages
     paths = [
         "./sample_inputs/sample1.jpeg",
         "./sample_inputs/sample2.jpeg",
@@ -280,8 +302,9 @@ if __name__ == "__main__":
         "./sample_inputs/sample4.jpeg",
         "./sample_inputs/sample5.jpg",
     ]
+    row_images = []
     for i, path in enumerate(paths, 1):
         np_image = read_image(path)
-        resized = resize_img(np_image, target_height=1000)
-        img_with_line = draw_hough_lines(resized, horizontal=False)
-        show_image(img_with_line, filename=f"out{i}", save=True)
+        row_images.append(RowImage(np_image, relative_floor=1))
+
+    books = get_books_list(row_images)
