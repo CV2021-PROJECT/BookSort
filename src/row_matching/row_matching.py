@@ -5,10 +5,10 @@ from helpers import *
 from models import *
 
 
-def is_identical_book(img1, img2):
+def is_identical_row(img1, img2):
     """
     Args:
-        같은 좌표에 올려져있는 두 개의 책 이미지
+        같은 좌표에 올려져있는 두 개의 책장 행 이미지
     """
     assert img1.shape == img2.shape, "사이즈 다릅니당~"
     mask1 = np.any(img1 != 0, axis=2)
@@ -24,32 +24,30 @@ def is_identical_book(img1, img2):
     rms_diff = np.sqrt(np.average(diff * diff))
 
     print("iou = {}, rms_diff = {}".format(iou, rms_diff))
-    return iou > 0.5 and rms_diff < 1
+    return iou > 0.1 and rms_diff < 1
 
-
-def match_book(
-    book1: Book,
-    book2: Book,
-    thr_match_nms: float = 0.7,
+def match_row(
+    row1: RowImage,
+    row2: RowImage,
+    thr_match_nms: float = 0.3,
     thr_inlier_pixel: float = 0.1,
     verbose: bool = False,
-) -> bool:
+    ) -> bool:
     """
     Usage:
-        book1, book2가 같은 책이니?
+        row1, row2가 같은 행이니?
 
     Args:
         thr_match_nms: Non Maximum Supression 할 때 필요한 값 (0~1, 작을수록 빡세게 supress 시키는거임)
         thr_inlier_pixel: Key Point 비교할 때 동일하다고 판단하기 위해 필요한 값 (0~inf)
     """
-    img1, _ = book1.rect()
-    img2, _ = book2.rect()
+    img1 = row1.img
+    img2 = row2.img
 
     kp1, kp2 = get_corr_keypoints(img1, img2, thr=thr_match_nms, verbose=verbose)
     assert len(kp1) == len(kp2), "Key Point matching 잘못된 듯?"
 
-    if len(kp1) < 4:
-        return False
+    if len(kp1) < 4: return False
 
     H_1_to_2 = find_optimal_H(kp2, kp1, thr=thr_inlier_pixel)
     img1_on_2 = warp_image(img1, img2, H_1_to_2)
@@ -57,28 +55,18 @@ def match_book(
     if verbose:
         cv2.imshow("img1_on_2", img1_on_2)
         cv2.imshow("img2", img2)
+        
 
-    return is_identical_book(img1_on_2, img2)
-
+    return is_identical_row(img1_on_2, img2)
 
 if __name__ == "__main__":
-    image1 = RowImage(cv2.imread("./data/image1_512.jpg"), 0)
-    image2 = RowImage(cv2.imread("./data/image2_512.jpg"), 0)
-    image3 = RowImage(cv2.imread("./data/image3_512.jpg"), 0)
+    row1_1 = RowImage(cv2.imread("./data/row_image/row1_img1.png"), 1)
+    row1_2 = RowImage(cv2.imread("./data/row_image/row1_img2.png"), 2)
+    row2_1 = RowImage(cv2.imread("./data/row_image/row2_img1.png"), 1)
+    row2_2 = RowImage(cv2.imread("./data/row_image/row2_img2.png"), 2)
 
-    book1 = Book(
-        image1, corner=np.array([[210, 46], [272, 48], [254, 494], [202, 488]])
-    )
-    book2 = Book(
-        image2, corner=np.array([[214, 64], [272, 64], [274, 500], [204, 494]])
-    )
-    book3 = Book(
-        image3, corner=np.array([[190, 148], [268, 156], [264, 468], [216, 472]])
-    )
-    book4 = Book(image1, corner=np.array([[93, 34], [178, 35], [170, 488], [102, 482]]))
-    book5 = Book(image2, corner=np.array([[127, 67], [194, 76], [169, 507], [86, 497]]))
-    book6 = Book(
-        image3, corner=np.array([[58, 134], [154, 136], [194, 462], [138, 462]])
-    )
+    print(match_row(row2_1, row2_2, verbose=True))
 
-    print(match_book(book1, book3, verbose=True))
+
+
+                               
