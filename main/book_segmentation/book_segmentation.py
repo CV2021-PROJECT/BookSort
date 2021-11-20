@@ -1,9 +1,13 @@
 #%%
+import os
+import sys
 from typing import List, Tuple
 import cv2
 import numpy as np
 import math
 from utils import *
+from models import Book
+
 
 
 def trim_lines(points: list, y_max: int, x_max: int):
@@ -11,11 +15,11 @@ def trim_lines(points: list, y_max: int, x_max: int):
 
     Args:
         points (list): Hough Line을 나타내는 ((x1, y1), (x2, y2)) 형태의 선분 리스트
-        y_max (int): 세로 방향 범위
+        y_max (int): 세로 방향 범위
         x_max (int): 가로 방향 범위
 
     Returns:
-        list: 범위를 넘어가지 않도록 다듬은 선분들의 리스트
+        list: 범위를 넘어가지 않도록 다듬은 선분들의 리스트
     """
     slope_threshold = y_max / x_max
     shortened_points = []
@@ -247,6 +251,7 @@ def finalize_lines(lines: list) -> list:
     finalized2 = []
     for i in range(len(finalized) - 1):
         line1, line2 = finalized[i], finalized[i + 1]
+        print(np.array(line1))
         upper_x_gap = line2[0][0] - line1[0][0]
         lower_x_gap = line2[1][0] - line1[1][0]
         if upper_x_gap < 20 or lower_x_gap < 20:
@@ -261,14 +266,22 @@ def finalize_lines(lines: list) -> list:
     return finalized2
 
 
+def book_segmentation(image_list: List[RowImage]) -> List[Book]:
+    for image in image_list:
+        resized = resize_img(image.img, target_height=1000)
+        lines = get_hough_lines(resized, horizontal=False)
+        for i in range(len(lines) - 1):
+            line1, line2 = lines[i], lines[i + 1]
+
+
 #%%
 if __name__ == "__main__":
     paths = [
-        "sample_inputs/sample1.jpeg",
-        "sample_inputs/sample2.jpeg",
-        "sample_inputs/sample3.jpeg",
-        "sample_inputs/sample4.jpeg",
-        "sample_inputs/sample5.jpg",
+        "./sample_inputs/sample1.jpeg",
+        "./sample_inputs/sample2.jpeg",
+        "./sample_inputs/sample3.jpeg",
+        "./sample_inputs/sample4.jpeg",
+        "./sample_inputs/sample5.jpg",
     ]
     for i, path in enumerate(paths, 1):
         np_image = read_image(path)
