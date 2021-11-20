@@ -1,13 +1,5 @@
-import sys, os
-sys.path.append(os.path.abspath(os.path.join('utils')))
-sys.path.append(os.path.abspath(os.path.join('models')))
-
-import numpy as np
-import cv2
-from ImageUtils import *
-from ImageMatchingUtils import *
-from Book import Book
-from RowImage import RowImage
+from helpers import *
+from models import *
 
 
 def warp_book_image(img, img_ref, H_to_ref):

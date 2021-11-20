@@ -1,15 +1,7 @@
 import numpy as np
 import cv2
 
-def tuple_to_homogeneous(t):
-    return np.expand_dims(np.array(t + (1,)), -1)
 
-def homogeneous_to_tuple(h):
-    assert len(h.shape) in [1,2]
-    if len(h.shape) == 1:
-        return h[:-1] / h[-1]
-    else:
-        return np.squeeze(h[:-1], -1) / h[-1]
 
 def crop_polygon(image, vertices):
     h = image.shape[0]

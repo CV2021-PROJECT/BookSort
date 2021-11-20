@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 import math
-from ImageUtils import *
+
 
 FLANN_INDEX_KDTREE = 0
 index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
@@ -9,13 +9,23 @@ search_params = dict(checks=50)
 flann = cv2.FlannBasedMatcher(index_params, search_params)
 
 
+def tuple_to_homogeneous(t):
+    return np.expand_dims(np.array(t + (1,)), -1)
+
+def homogeneous_to_tuple(h):
+    assert len(h.shape) in [1,2]
+    if len(h.shape) == 1:
+        return h[:-1] / h[-1]
+    else:
+        return np.squeeze(h[:-1], -1) / h[-1]
+
 def get_inverse(H):
     return np.linalg.inv(H)
 
 def get_H(p1, p2):
     A = []
     zero3 = np.zeros((1,3))
-    
+
     for (ui, vi), (xi, yi) in zip(p1, p2):
         xy_hmg_row = tuple_to_homogeneous((xi, yi)).transpose()
 
