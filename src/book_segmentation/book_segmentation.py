@@ -1,13 +1,10 @@
 #%%
-import os
-import sys
 from typing import List, Tuple
 import cv2
 import numpy as np
 import math
-from utils import *
-from models import Book
-
+from models import RowImage, Book
+from helpers import resize_img, read_image, show_image
 
 
 def trim_lines(points: list, y_max: int, x_max: int):

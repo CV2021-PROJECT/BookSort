@@ -1,21 +1,9 @@
-import sys, os
-sys.path.append(os.path.abspath(os.path.join('utils')))
-sys.path.append(os.path.abspath(os.path.join('models')))
+import sys
+sys.path.append("..")
 
-import numpy as np
-import cv2
-from ImageUtils import *
-from ImageMatchingUtils import *
-from Book import Book
-from RowImage import RowImage
+from helpers import *
+from models import *
 
-
-def warp_image(img, img_ref, H_to_ref):
-    """
-    img 를 img_ref 의 좌표 위로 올라가도록 변환하는 함수
-    """
-    w, h = img_ref.shape[:2]
-    return cv2.warpPerspective(img, H_to_ref, dsize=(h, w))
 
 def is_identical_row(img1, img2):
     """
@@ -71,13 +59,13 @@ def match_row(
 
     return is_identical_row(img1_on_2, img2)
 
-#if __name__ == "__main__":
-row1_1 = RowImage(cv2.imread("./data/row_image/row1_img1.png"), 1)
-row1_2 = RowImage(cv2.imread("./data/row_image/row1_img2.png"), 2)
-row2_1 = RowImage(cv2.imread("./data/row_image/row2_img1.png"), 1)
-row2_2 = RowImage(cv2.imread("./data/row_image/row2_img2.png"), 2)
+if __name__ == "__main__":
+    row1_1 = RowImage(cv2.imread("./data/row_image/row1_img1.png"), 1)
+    row1_2 = RowImage(cv2.imread("./data/row_image/row1_img2.png"), 2)
+    row2_1 = RowImage(cv2.imread("./data/row_image/row2_img1.png"), 1)
+    row2_2 = RowImage(cv2.imread("./data/row_image/row2_img2.png"), 2)
 
-print(match_row(row2_1, row2_2, verbose=True))
+    print(match_row(row2_1, row2_2, verbose=True))
 
 
 
