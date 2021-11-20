@@ -26,16 +26,18 @@ def is_identical_book(img1, img2):
     assert img1.shape == img2.shape, "사이즈 다릅니당~"
     mask1 = np.any(img1 != 0, axis=2)
     mask2 = np.any(img2 != 0, axis=2)
-    mask = (mask1 * mask2).astype(np.uint8) # 0 or 1
-    mask = np.tile(np.expand_dims(mask, -1), 3)
+    iou = np.sum(mask1 * mask2) / np.sum(mask1 + mask2)
     
+    mask = (mask1 * mask2).astype(np.uint8) # 0 or 1
+    mask = np.tile(np.expand_dims(mask, -1), 3)    
     img1_norm = normalize(img1 * mask)
     img2_norm = normalize(img2 * mask)
 
     diff = img1_norm - img2_norm
     rms_diff = np.sqrt(np.average(diff * diff))
 
-    return rms_diff < 1
+    print("iou = {}, rms_diff = {}".format(iou, rms_diff))
+    return iou > 0.5 and rms_diff < 1
         
 
 def match_book(
@@ -83,4 +85,4 @@ if __name__ == "__main__":
     book5 = Book(image2, corner=np.array([[127, 67], [194, 76], [169, 507], [86, 497]]))
     book6 = Book(image3, corner=np.array([[58, 134], [154, 136], [194, 462], [138, 462]]))
 
-    print(match_book(book4, book6, 0.5, 0.25, verbose=False))
+    print(match_book(book1, book3, 0.5, 0.25, verbose=True))
