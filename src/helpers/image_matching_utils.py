@@ -151,3 +151,11 @@ def get_corr_keypoints(img1, img2, thr, verbose=False):
                 matched_kp2.append(new_kp2)
 
     return matched_kp1, matched_kp2
+
+
+def warp_image(img, img_ref, H_to_ref):
+    """
+    img 를 img_ref 의 좌표 위로 올라가도록 변환하는 함수
+    """
+    w, h = img_ref.shape[:2]
+    return cv2.warpPerspective(img, H_to_ref, dsize=(h, w))
