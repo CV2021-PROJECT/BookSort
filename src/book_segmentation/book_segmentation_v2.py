@@ -214,7 +214,6 @@ class BookSpines:
 
     def get_book_spines(self, img: np.ndarray):
         _img = np.mean(img, axis=2)
-        img_final = np.zeros_like(_img)
         _img = self.gaussian_blur(_img)
         _img = self.sobel_vertical(_img)
         _img = self.downsample(_img)
@@ -224,17 +223,14 @@ class BookSpines:
         _img = self.vertical_dilate(_img)
         _img, n_features = self.group_lines(_img)
         _img = self.remove_short_lines_vertical(_img, n_features=n_features)
-        _img = self.upsample(_img)
-
-        _img.resize(img.shape[:2])
-        img_final += _img
-
-        img_final = self.binarize_to_one(img_final)
-        img_final, n_features = self.group_lines(img_final)
-        lines = self.get_lines_from_img(img_final, n_features=n_features)
+        _img = resize_img(_img, target_height=img.shape[0], target_width=img.shape[1])
+        _img = self.binarize_to_one(_img)
+        _img, n_features = self.group_lines(_img)
+        lines = self.get_lines_from_img(_img, n_features=n_features)
 
         if self.verbose:
             new_img = img.copy()
+            plt.figure(figsize=(16, 12))
             plt.imshow(new_img, cmap="gray", interpolation="none")
             for line in lines:
                 y0 = line.min_y
