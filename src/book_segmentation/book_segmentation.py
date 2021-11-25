@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import math
 from models import RowImage, Book
-from helpers import resize_img, read_image, show_image
+from helpers import read_image, show_image
 
 
 def trim_lines(points: list, y_max: int, x_max: int):
@@ -144,6 +144,9 @@ def draw_hough_lines(img: np.ndarray, horizontal: bool = False) -> np.ndarray:
         np.ndarray: 출력 이미지
     """
     final_points = get_hough_lines(img, horizontal=horizontal)
+    if len(final_points) == 0:
+        print("hough line을 찾을 수 없어요.")
+        return img
     for point in final_points:
         ((x1, y1), (x2, y2)) = point
         final_image = cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
@@ -172,7 +175,7 @@ def leave_horizontals_only(lines: np.ndarray) -> np.ndarray:
     for line in lines:
         ((x1, y1), (x2, y2)) = line
         angle = np.arctan2(y2 - y1, x2 - x1) * 180.0 / np.pi
-        if 0 <= abs(angle) < 10:
+        if 0 <= abs(angle) < 5:
             horizontals.append(line)
     return horizontals
 
@@ -218,12 +221,19 @@ def get_hough_lines(img: np.ndarray, horizontal: bool = False):
     if horizontal:
         kernel = kernel.T
     img_erosion = cv2.erode(edge, kernel, iterations=1)
-    lines = cv2.HoughLines(img_erosion, 1, np.pi / 180, 200 if horizontal else 90)
+
+    if horizontal:
+        lines = cv2.HoughLines(img_erosion, 1, np.pi / 180, 15)
+    else:
+        lines = cv2.HoughLines(img_erosion, 1, np.pi / 180, 90)
+
     if lines is None:
         return []
     points = convert_to_xy(lines)
     points.sort(key=lambda val: val[0][0])
-    points = remove_duplicate_lines(points, horizontal=horizontal)
+
+    if not horizontal:
+        points = remove_duplicate_lines(points, horizontal=horizontal)
 
     if horizontal:
         points = leave_horizontals_only(points)
@@ -231,7 +241,9 @@ def get_hough_lines(img: np.ndarray, horizontal: bool = False):
         points = leave_verticals_only(points)
 
     points = trim_lines(points, height, width)
-    points = finalize_lines(points)
+
+    if not horizontal:
+        points = finalize_lines(points)
 
     return points
 
@@ -277,17 +289,58 @@ def finalize_lines(lines: list) -> list:
     return finalized2
 
 
+def line(p1, p2):
+    A = p1[1] - p2[1]
+    B = p2[0] - p1[0]
+    C = p1[0] * p2[1] - p2[0] * p1[1]
+    return A, B, -C
+
+
+def intersection(L1, L2):
+    D = L1[0] * L2[1] - L1[1] * L2[0]
+    Dx = L1[2] * L2[1] - L1[1] * L2[2]
+    Dy = L1[0] * L2[2] - L1[2] * L2[0]
+    if D != 0:
+        x = Dx / D
+        y = Dy / D
+        return x, y
+    else:
+        return False
+
+
 def get_books_list(image_list: List[RowImage]) -> List[Book]:
     books = []
-    for image in image_list:
-        resized = resize_img(image.img, target_height=1000)
-        lines = get_hough_lines(resized, horizontal=False)
-        # image_with_line = draw_lines_on_image(img=resized, lines=lines)
-        # show_image(image_with_line)
+    for row_image in image_list:
+        lines = get_hough_lines(row_image.get_resized_img(), horizontal=False)
+        image_with_line = draw_lines_on_image(
+            img=row_image.get_resized_img(), lines=lines
+        )
+        show_image(image_with_line)
         for i in range(len(lines) - 1):
             line1, line2 = lines[i], lines[i + 1]
             corner = np.vstack((np.array(line1), np.array(line2)))
-            new_book = Book(row_image=image, corner=corner)
+            corner[[2, 3]] = corner[[3, 2]]  # 반시계방향으로 변경
+            new_book = Book(row_image=row_image, corner=corner)
+
+            # 위아래 부분을 자른다.
+            rect, _ = new_book.rect(use_resized_img=True)
+            horizontal_lines = get_hough_lines(rect, horizontal=True)
+            if len(horizontal_lines) == 0:
+                books.append(new_book)
+                continue
+
+            horizontal_lines.sort(key=lambda val: val[0][1])  # y좌표 기준으로 정렬
+            first_y = horizontal_lines[1][0][1]
+            last_y = horizontal_lines[-1][0][1]
+            first_line = line([-2000, first_y], [2000, first_y])
+            last_line = line([-2000, last_y], [2000, last_y])
+            line1 = line(*line1)
+            line2 = line(*line2)
+            lu = intersection(first_line, line1)
+            ld = intersection(last_line, line1)
+            rd = intersection(last_line, line2)
+            ru = intersection(first_line, line2)
+            new_book.corner = np.array([lu, ld, rd, ru]).astype(int)
             books.append(new_book)
     return books
 
@@ -308,3 +361,6 @@ if __name__ == "__main__":
         row_images.append(RowImage(np_image, relative_floor=1))
 
     books = get_books_list(row_images)
+    for book in books[10:20]:
+        rect, _ = book.rect(use_resized_img=True)
+        # show_image(rect)
