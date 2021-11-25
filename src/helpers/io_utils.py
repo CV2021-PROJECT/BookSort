@@ -29,7 +29,9 @@ def read_image(path: str) -> np.ndarray:
     return np_img
 
 
-def resize_img(img: np.ndarray, target_height: int) -> np.ndarray:
+def resize_img(
+    img: np.ndarray, target_height: int, target_width: int = None
+) -> np.ndarray:
     """이미지의 비율을 유지하면서 높이를 target_height으로 고정한다.
 
     Args:
@@ -39,7 +41,10 @@ def resize_img(img: np.ndarray, target_height: int) -> np.ndarray:
     Returns:
         np.ndarray: 출력 이미지
     """
-    h, w, _ = img.shape
+    img = img.astype(np.float32)
+    if target_width is not None:
+        return cv2.resize(img, (target_width, target_height))
+    h, w = img.shape[:2]
     new_height = target_height
     scale = h / new_height
     new_width = math.ceil(w / scale)
