@@ -348,7 +348,7 @@ class BookSpines:
             corner = np.array([lu, ld, rd, ru]).astype(int)
             new_book = Book(row_image=row_image, corner=corner)
             self.books.append(new_book)
-        self.verbose = True
+
         if self.verbose:
             new_img = img.copy()
             plt.figure(figsize=(16, 12))
@@ -361,7 +361,6 @@ class BookSpines:
             plt.xticks([])
             plt.yticks([])
             plt.show()
-        self.verbose = False
 
     def get_books(self) -> List[Book]:
         for row_image in self.row_images:
