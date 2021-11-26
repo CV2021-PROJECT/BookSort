@@ -25,7 +25,7 @@ def is_identical_row(img1, img2):
     rms_diff = np.sqrt(np.sum(diff * diff) / (np.sum(mask) + 1e-6))
 
     print("iou = {}, rms_diff = {}".format(iou, rms_diff))
-    return iou > 0.1 and rms_diff < 1
+    return iou > 0.1 and rms_diff < 1.5
 
 def match_row(
     row1: RowImage,
