@@ -1,1 +1,1 @@
-from .book_rectification import Edgelets 
+from .book_rectification import rectify, generate_row_image
