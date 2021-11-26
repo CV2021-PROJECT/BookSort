@@ -148,10 +148,10 @@ def generate_row_image(src: Source) -> list:
     kernel = np.zeros((5, 5), dtype=np.uint8)
     kernel[2, :] = 1
     edgeMaskEroded = cv2.erode(edgeMask, kernel, iterations=1)
-    # show_image(edgeMaskEroded)
     lines = cv2.HoughLines(edgeMaskEroded, 1, np.pi / 180, 150)
 
     
+    '''
     # Debugging purpose
     scaledDst2 = scaledDst.copy()
     if lines is not None:
@@ -166,6 +166,7 @@ def generate_row_image(src: Source) -> list:
             pt2 = (int(x0 - 1000*(-b)), int(y0 - 1000*(a)))
             cv2.line(scaledDst2, pt1, pt2, (0,0,255), 3, cv2.LINE_AA)
     show_image(scaledDst2)
+    '''
 
     # Grouping edges
     heights = []
