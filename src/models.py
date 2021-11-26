@@ -26,7 +26,7 @@ class RowImage:
             source (Source): 원본 이미지
             relative_floor (int): 상대적 층수
             absolute_floor (int): 절대적 층수
-            horizontal_position (float): 같은 층들끼리의 상대적인 가로 위치
+            homography_in_row (np.ndarray): 기준 좌표계로의 homography
         """
         self.img = img
         self.source = source
