@@ -5,5 +5,11 @@ assigned to 박신홍(@shp7724)
 ## How to Use?
 
 ```python
-def get_books_list(image_list: List[RowImage]) -> List[Book]:
+from book_segmentation import BookSpines
+
+book_spines = BookSpines(row_images=row_images, verbose=False)
+books = book_spines.get_books()
+for book in books:
+    rect, _ = book.rect()
+    # do whatever you want ...
 ```
