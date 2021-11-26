@@ -22,13 +22,17 @@ class RowImage:
         """
         Args:
             img (np.ndarray): numpy 배열로 나타낸 이미지 파일
+            source (Source): 원본 이미지
             relative_floor (int): 상대적 층수
+            absolute_floor (int): 절대적 층수
+            horizontal_position (float): 같은 층들끼리의 상대적인 가로 위치
         """
         self.img = img
         self.source = source
         self.resized_img: np.ndarray = None
         self.relative_floor = relative_floor
         self.absolute_floor = None  # 생성 시점에서는 absolute_floor 정보를 알 수 없다.
+        self.horizontal_position = None # 마찬가지로, 생성 시점에서는 모르니까
 
     def __str__(self):
         return "고향: {}, 상대적 위치: {}, 절대적 위치: {}"\
