@@ -108,7 +108,7 @@ def find_optimal_H(p1, p2, thr):
     # print(inliers_1)
     # print(inliers_2)
 
-    return get_H(inliers_1, inliers_2)
+    return get_H(best_inliers_1, best_inliers_2)
 
 
 def get_corr_keypoints(img1, img2, thr, verbose=False):
