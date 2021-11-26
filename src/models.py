@@ -41,19 +41,13 @@ class Book:
         self.row_image = row_image
         self.corner = corner
 
-    def rect(self, use_resized_img=False):
+    def rect(self):
         """
-        Args:
-            use_resized_img (bool): corner가 리사이즈된 이미지를 기준으로 구해졌다면, rect도 리사이즈된 이미지를 기준으로 구해야한다.
-
         Returns:
             crop: RGB 이미지
             mask: 0/255 이미지
         """
-        if use_resized_img:
-            img = self.row_image.get_resized_img()
-        else:
-            img = self.row_image.img
+        img = self.row_image.img
         crop = crop_polygon(img, self.corner)
         mask = crop_polygon(np.ones(img.shape).astype(np.uint8) * 255, self.corner)
 

@@ -1,4 +1,7 @@
 #%%
+import sys
+
+sys.path.append("..")
 from typing import List, Tuple
 import cv2
 import numpy as np
@@ -51,6 +54,7 @@ def trim_lines(points: list, y_max: int, x_max: int):
             end_point = (0, abs(new_y2))
         else:
             # 정확히 대각선 (가능성 거의 없음)
+            print("대각선")
             if m > 0:
                 start_point = (0, y_max)
                 end_point = (x_max, 0)
@@ -158,7 +162,7 @@ def draw_lines_on_image(img: np.ndarray, lines: np.ndarray) -> np.ndarray:
     canvas = img.copy()
     for line in lines:
         ((x1, y1), (x2, y2)) = line
-        canvas = cv2.line(canvas, (x1, y1), (x2, y2), (0, 0, 255), 2)
+        canvas = cv2.line(canvas, (x1, y1), (x2, y2), (0, 0, 255), 4)
     return canvas
 
 
@@ -208,6 +212,7 @@ def get_hough_lines(img: np.ndarray, horizontal: bool = False):
     blur = cv2.GaussianBlur(img, (11, 11), 2)
     gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
     edge = cv2.Canny(gray, 50, 100)
+    show_image(edge)
     kernel = np.array(
         [
             [0, 0, 1, 0, 0],
@@ -221,7 +226,7 @@ def get_hough_lines(img: np.ndarray, horizontal: bool = False):
     if horizontal:
         kernel = kernel.T
     img_erosion = cv2.erode(edge, kernel, iterations=1)
-
+    show_image(img_erosion)
     if horizontal:
         lines = cv2.HoughLines(img_erosion, 1, np.pi / 180, 15)
     else:
@@ -349,11 +354,11 @@ def get_books_list(image_list: List[RowImage]) -> List[Book]:
 if __name__ == "__main__":
     # Prepare RowImages
     paths = [
-        "./sample_inputs/sample1.jpeg",
+        # "./sample_inputs/sample1.jpeg",
         "./sample_inputs/sample2.jpeg",
-        "./sample_inputs/sample3.jpeg",
-        "./sample_inputs/sample4.jpeg",
-        "./sample_inputs/sample5.jpg",
+        # "./sample_inputs/sample3.jpeg",
+        # "./sample_inputs/sample4.jpeg",
+        # "./sample_inputs/sample5.jpg",
     ]
     row_images = []
     for i, path in enumerate(paths, 1):
@@ -361,6 +366,6 @@ if __name__ == "__main__":
         row_images.append(RowImage(np_image, relative_floor=1))
 
     books = get_books_list(row_images)
-    for book in books[10:20]:
-        rect, _ = book.rect(use_resized_img=True)
-        # show_image(rect)
+    # for book in books[10:20]:
+    #     rect, _ = book.rect(use_resized_img=True)
+    # show_image(rect)
