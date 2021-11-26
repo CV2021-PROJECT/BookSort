@@ -15,6 +15,7 @@ class Source:
     def __hash__(self):
         return hash(self.path)
 
+
 class RowImage:
     """책장의 한 행을 나타내는 이미지 모델"""
 
@@ -32,7 +33,7 @@ class RowImage:
         self.resized_img: np.ndarray = None
         self.relative_floor = relative_floor
         self.absolute_floor = None  # 생성 시점에서는 absolute_floor 정보를 알 수 없다.
-        self.horizontal_position = None # 마찬가지로, 생성 시점에서는 모르니까
+        self.homography_in_row = None # 마찬가지로, 생성 시점에서는 모르니까
 
     def __str__(self):
         return "고향: {}, 상대적 위치: {}, 절대적 위치: {}"\
