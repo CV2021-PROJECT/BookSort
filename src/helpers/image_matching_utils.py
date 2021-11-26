@@ -8,7 +8,6 @@ index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
 search_params = dict(checks=50)
 flann = cv2.FlannBasedMatcher(index_params, search_params)
 
-
 def tuple_to_homogeneous(t):
     return np.expand_dims(np.array(t + (1,)), -1)
 
@@ -80,6 +79,7 @@ def find_optimal_H(p1, p2, thr):
     H_optimal = None
     N, count = float("inf"), 0
     num_of_inliers_max = -float("inf")
+    best_inliers_1, best_inliers_2 = None, None
     error = float("inf")
 
     while count < N:
@@ -93,22 +93,26 @@ def find_optimal_H(p1, p2, thr):
         n_in = np.shape(inliers_1)[0]  # = np.shape(iinliers_2)[0]
         if n_in > num_of_inliers_max or (n_in == num_of_inliers_max and e < error):
             num_of_inliers_max = n_in
+            best_inliers_1 = inliers_1.copy()
+            best_inliers_2 = inliers_2.copy()
             H_optimal = H
             error = e
 
         eps = 1 - n_in / len(p1)
         N = (
-            math.log(1 - 0.999) / math.log(1 - (1 - eps) ** 4)
+            math.log(1 - 0.95) / math.log(1 - (1 - eps) ** 4)
             if 0 < eps < 1
-            else float("inf")
+            else 1000
         )
         count += 1
+
+    #print("hello1", count, N)
 
     # print(num_of_inliers_max)
     # print(inliers_1)
     # print(inliers_2)
 
-    return get_H(inliers_1, inliers_2)
+    return get_H(best_inliers_1, best_inliers_2)
 
 
 def get_corr_keypoints(img1, img2, thr, verbose=False):
