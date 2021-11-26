@@ -3,6 +3,10 @@ import cv2
 import math
 
 
+FLANN_INDEX_KDTREE = 0
+index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
+search_params = dict(checks=50)
+flann = cv2.FlannBasedMatcher(index_params, search_params)
 
 def tuple_to_homogeneous(t):
     return np.expand_dims(np.array(t + (1,)), -1)
@@ -96,7 +100,7 @@ def find_optimal_H(p1, p2, thr):
 
         eps = 1 - n_in / len(p1)
         N = (
-            math.log(1 - 0.999) / math.log(1 - (1 - eps) ** 4)
+            math.log(1 - 0.95) / math.log(1 - (1 - eps) ** 4)
             if 0 < eps < 1
             else 1000
         )
@@ -114,15 +118,8 @@ def find_optimal_H(p1, p2, thr):
 def get_corr_keypoints(img1, img2, thr, verbose=False):
     sift = cv2.xfeatures2d.SIFT_create()
 
-    
-
     kp1, des1 = sift.detectAndCompute(img1, None)
     kp2, des2 = sift.detectAndCompute(img2, None)
-
-    FLANN_INDEX_KDTREE = 0
-    index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-    search_params = dict(checks=50)
-    flann = cv2.FlannBasedMatcher(index_params, search_params)
 
     matches = flann.knnMatch(des1, des2, k=2)
     matchesMask = [[0, 0] for i in range(len(matches))]

@@ -125,15 +125,6 @@ if __name__ == "__main__":
             row_image = RowImage(img, source, j)
             row_image_list.append(row_image)
 
-
-    #cv2.imshow("10", row_image_list[10].img)
-    #cv2.imshow("13", row_image_list[13].img)
-
-    #print(match_row(row_image_list[13], row_image_list[10], verbose=True))
-    #print(match_row(row_image_list[3], row_image_list[1], verbose=True))
-    
-    #assert False
-
     print("========== before ==========")
     for row_image in row_image_list:
         print(row_image)
