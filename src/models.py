@@ -2,20 +2,42 @@ from typing import List, Tuple
 import numpy as np
 from helpers import crop_polygon, resize_img
 
+class Source:
+    """촬영한 한 장의 이미지"""
+
+    def __init__(self, img: np.ndarray, path: str):
+        self.img = img
+        self.path = path
+
+    def __eq__(self, other):
+        return other.path == self.path
+
+    def __hash__(self):
+        return hash(self.path)
+
 
 class RowImage:
     """책장의 한 행을 나타내는 이미지 모델"""
 
-    def __init__(self, img: np.ndarray, relative_floor: int) -> None:
+    def __init__(self, img: np.ndarray, source: Source, relative_floor: int) -> None:
         """
         Args:
             img (np.ndarray): numpy 배열로 나타낸 이미지 파일
+            source (Source): 원본 이미지
             relative_floor (int): 상대적 층수
+            absolute_floor (int): 절대적 층수
+            homography_in_row (np.ndarray): 기준 좌표계로의 homography
         """
         self.img = img
+        self.source = source
         self.resized_img: np.ndarray = None
         self.relative_floor = relative_floor
         self.absolute_floor = None  # 생성 시점에서는 absolute_floor 정보를 알 수 없다.
+        self.homography_in_row = None # 마찬가지로, 생성 시점에서는 모르니까
+
+    def __str__(self):
+        return "고향: {}, 상대적 위치: {}, 절대적 위치: {}"\
+               .format(self.source.path, self.relative_floor, self.absolute_floor)
 
     def update_absolute_floor(self, value: int):
         self.absolute_floor = value

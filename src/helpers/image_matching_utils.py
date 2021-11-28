@@ -8,7 +8,6 @@ index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
 search_params = dict(checks=50)
 flann = cv2.FlannBasedMatcher(index_params, search_params)
 
-
 def tuple_to_homogeneous(t):
     return np.expand_dims(np.array(t + (1,)), -1)
 
@@ -76,10 +75,11 @@ def get_inliers_error(p1, p2, H, thr):
     return inliers_1, inliers_2, np.sum(e)
 
 
-def find_optimal_H(p1, p2, thr):
+def find_optimal_H(p1, p2, thr, runtime_bound=1000):
     H_optimal = None
     N, count = float("inf"), 0
     num_of_inliers_max = -float("inf")
+    best_inliers_1, best_inliers_2 = None, None
     error = float("inf")
 
     while count < N:
@@ -93,22 +93,28 @@ def find_optimal_H(p1, p2, thr):
         n_in = np.shape(inliers_1)[0]  # = np.shape(iinliers_2)[0]
         if n_in > num_of_inliers_max or (n_in == num_of_inliers_max and e < error):
             num_of_inliers_max = n_in
+            best_inliers_1 = inliers_1.copy()
+            best_inliers_2 = inliers_2.copy()
             H_optimal = H
             error = e
 
         eps = 1 - n_in / len(p1)
         N = (
-            math.log(1 - 0.999) / math.log(1 - (1 - eps) ** 4)
+            math.log(1 - 0.95) / math.log(1 - (1 - eps) ** 4)
             if 0 < eps < 1
-            else float("inf")
+            else np.float('inf')
         )
         count += 1
+
+        if count > runtime_bound: return None
+
+    #print("hello1", count, N)
 
     # print(num_of_inliers_max)
     # print(inliers_1)
     # print(inliers_2)
 
-    return get_H(inliers_1, inliers_2)
+    return get_H(best_inliers_1, best_inliers_2)
 
 
 def get_corr_keypoints(img1, img2, thr, verbose=False):
@@ -152,10 +158,34 @@ def get_corr_keypoints(img1, img2, thr, verbose=False):
 
     return matched_kp1, matched_kp2
 
-
 def warp_image(img, img_ref, H_to_ref):
     """
     img 를 img_ref 의 좌표 위로 올라가도록 변환하는 함수
     """
     w, h = img_ref.shape[:2]
     return cv2.warpPerspective(img, H_to_ref, dsize=(h, w))
+
+
+def merge_images(img_list, H_list):
+    all_corners = []
+    for img, H in zip(img_list, H_list):
+        h, w = img.shape[:2]
+        corners = np.float32([[0, 0], [0, h], [w, 0], [w, h]]).reshape(-1,1,2)
+        corners = cv2.perspectiveTransform(corners, H)
+        all_corners.append([[corners]])
+
+    all_corners = np.block(all_corners)
+    
+    [xmin, ymin] = np.int32(all_corners.min(axis=0).ravel() - 0.5)
+    [xmax, ymax] = np.int32(all_corners.max(axis=0).ravel() + 0.5)
+    Ht = np.array([[1,0,-xmin],[0,1,-ymin],[0,0,1]])
+
+    result = np.zeros((ymax-ymin, xmax-xmin, 3)).astype(np.uint8)
+    for img, H in zip(img_list, H_list):
+        warped = cv2.warpPerspective(img, Ht @ H, dsize=(xmax-xmin, ymax-ymin))
+        intersection = np.logical_and(warped != 0, result != 0)
+        error_rms = np.sqrt(np.sum(np.power(result[intersection] - warped[intersection], 2)) / (np.sum(intersection) + 1e-6))
+        if error_rms < 10:
+            result[warped != 0] = warped[warped != 0]
+
+    return result
