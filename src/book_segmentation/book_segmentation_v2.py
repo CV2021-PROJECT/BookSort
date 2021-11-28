@@ -13,7 +13,7 @@ import scipy.ndimage
 from scipy.ndimage.measurements import label
 import scipy.stats
 from helpers import read_image, resize_img, show_image
-from models import RowImage, Book
+from models import RowImage, Book, Source
 
 
 class Line:
@@ -381,7 +381,7 @@ if __name__ == "__main__":
     row_images = []
     for i, path in enumerate(paths, 1):
         np_image = read_image(path)
-        row_images.append(RowImage(np_image, relative_floor=1))
+        row_images.append(RowImage(np_image, source=Source(np_image, path), relative_floor=1))
 
     book_spines = BookSpines(row_images=row_images, verbose=False)
     books = book_spines.get_books()
