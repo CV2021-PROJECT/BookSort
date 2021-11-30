@@ -168,6 +168,7 @@ class BookSpines:
             ptps.append(ptp)
 
         # Determine which lines to drop
+        if len(ptps) == 0: return img
         threshold = np.max(ptps) / 2.0
         for i in range(len(ptps)):
             if ptps[i] < threshold:
