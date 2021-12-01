@@ -110,7 +110,7 @@ class BookSpines:
         return upsampled
 
     def sobel_vertical(self, img: np.ndarray) -> np.ndarray:
-        sobel = np.sqrt(cv2.Sobel(img, cv2.CV_64F, 1, 0)**2)
+        sobel = np.sqrt(cv2.Sobel(img, cv2.CV_64F, 1, 0) ** 2)
         self.show_if_verbose(sobel, "sobel_vertical")
         return sobel
 
@@ -259,7 +259,7 @@ class BookSpines:
         if y1 < y2:
             return np.array([(x1, y1), (x2, y2)])
         else:
-            return np.array([(x2, y2),(x1, y1)])
+            return np.array([(x2, y2), (x1, y1)])
 
     def GetAllPointsBetween(self, start: np.ndarray, end: np.ndarray):
         x_diff = abs(end[0] - start[0])
@@ -297,8 +297,10 @@ class BookSpines:
             for x, y in self.GetAllPointsBetween(start_coord, end_coord):
                 y_lower = y - radius
                 y_upper = y + radius
-                x_lower, x_upper = x - radius, x+ radius
-                if not(x_lower >=0 and y_lower >=0) or not (x_upper <=binary_img.shape[1] and y_upper <= binary_img.shape[0]):
+                x_lower, x_upper = x - radius, x + radius
+                if not (x_lower >= 0 and y_lower >= 0) or not (
+                    x_upper <= binary_img.shape[1] and y_upper <= binary_img.shape[0]
+                ):
                     continue
                 if np.max(binary_img[y_lower:y_upper, x_lower:x_upper]) == 1:
                     this_coord = np.array([x, y])
@@ -319,6 +321,8 @@ class BookSpines:
         max_len = -1
         max_dict = None
         for line_dict in line_list:
+            if "start" not in line_dict or "end" not in line_dict:
+                continue
             new_len = np.hypot(*(line_dict["start"] - line_dict["end"]))
             if new_len > max_len:
                 max_len = new_len
@@ -354,18 +358,18 @@ class BookSpines:
             new_book = Book(row_image=row_image, corner=corner)
             self.books.append(new_book)
 
-        # if self.verbose:
-        new_img = img.copy()
-        plt.figure(figsize=(16, 12))
-        plt.imshow(new_img, cmap="gray", interpolation="none")
-        for segment in segments:
-            ((x0, y0), (x1, y1)) = (segment["start"], segment["end"])
-            plt.plot([x0, x1], [y0, y1], color=np.array([0, 169, 55]) / 255.0, lw=5)
-        plt.xlim(0, img.shape[1])
-        plt.ylim(img.shape[0], 0)
-        plt.xticks([])
-        plt.yticks([])
-        plt.show()
+        if self.verbose:
+            new_img = img.copy()
+            plt.figure(figsize=(16, 12))
+            plt.imshow(new_img, cmap="gray", interpolation="none")
+            for segment in segments:
+                ((x0, y0), (x1, y1)) = (segment["start"], segment["end"])
+                plt.plot([x0, x1], [y0, y1], color=np.array([0, 169, 55]) / 255.0, lw=5)
+            plt.xlim(0, img.shape[1])
+            plt.ylim(img.shape[0], 0)
+            plt.xticks([])
+            plt.yticks([])
+            plt.show()
 
     def get_books(self) -> List[Book]:
         for row_image in self.row_images:
