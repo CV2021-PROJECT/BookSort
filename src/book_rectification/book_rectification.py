@@ -19,12 +19,12 @@ class Edgelet:
 
     def getModel(self, others):
         model = np.cross(self.line, others.line)
-        model = model / np.max(np.abs(model)) # scaling
+        model = model / (np.max(np.abs(model)) + 1e-5) # scaling
         return model
 
     def applyModel(self, model, threshold):
         vec = (model[0:2] - np.array(self.center) * model[2])
-        vec = vec / np.linalg.norm(vec)
+        vec = vec / (np.linalg.norm(vec) + 1e-5)
         angle = np.arccos(min(np.abs(np.dot(vec, self.direction)), 1))
         if angle < threshold * np.pi / 180:
             return self.strength 
@@ -62,7 +62,7 @@ def refineModel(model, edgelets):
     vanish = vt[-1, :]
     return vanish, nextEdgelets
 
-def rectify(src, sigma=11, cannyLow=20, cannyHigh=50, voteThreshold=250, minLineLength=300, maxLineGap=50):
+def rectify(src, sigma=11, cannyLow=20, cannyHigh=50, voteThreshold=100, minLineLength=30, maxLineGap=3):
     """
     Args:
         src : source image (ndarray)
@@ -98,7 +98,7 @@ def rectify(src, sigma=11, cannyLow=20, cannyHigh=50, voteThreshold=250, minLine
 
     # Find horizontal / vertical vanishing point
     # vanish1 : vertical, vanish2 : horizontal 
-    imageCenter = np.array([src.shape[1] - 1, src.shape[0] - 1]) / 2
+    imageCenter = np.array([srcResized.shape[1] - 1, srcResized.shape[0] - 1]) / 2
     disp1 = vanish1[0:2] - imageCenter * vanish1[2]
     disp2 = vanish2[0:2] - imageCenter * vanish2[2]
     hor1 = np.arctan2(disp1[1], disp1[0])
@@ -118,8 +118,9 @@ def rectify(src, sigma=11, cannyLow=20, cannyHigh=50, voteThreshold=250, minLine
     imageCenter = np.append(imageCenter, 1)
     imageCenterTrans = H@imageCenter
     deltaCenter = (H[0:2, 0:2] * imageCenterTrans[2] - H[2, 0:2] * imageCenterTrans[0:2]) / imageCenterTrans[2] / imageCenterTrans[2]
-    H[0] *= ratio / np.sign(deltaCenter[0, 0]) / np.linalg.norm(deltaCenter[0])
-    H[1] *= ratio / np.sign(deltaCenter[1, 1]) / np.linalg.norm(deltaCenter[1])
+    H[0] *= 1 / np.sign(deltaCenter[0, 0]) / np.linalg.norm(deltaCenter[0])
+    H[1] *= 1 / np.sign(deltaCenter[1, 1]) / np.linalg.norm(deltaCenter[1])
+    H = np.diag([ratio, ratio, 1])@H@np.diag([1 / ratio, 1 / ratio, 1])
 
     # Translate & crop to content
     corner = (np.array([[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]) * np.array([src.shape[1] - 1, src.shape[0] - 1, 1])).T
@@ -180,7 +181,9 @@ def generate_row_image(src: Source) -> list:
             rho = lines[i][0][0]
             theta = lines[i][0][1]
             if abs(theta - np.pi / 2) < 0.1:
-                heights.append((rho - (scaledDst.shape[1] - 1) / 2 * np.cos(theta)) / np.sin(theta))
+                height = (rho - (scaledDst.shape[1] - 1) / 2 * np.cos(theta)) / np.sin(theta)
+                if height >= 0 and height < scaledDst.shape[0] - 1:
+                    heights.append(height)
 
     heights.sort()
     gapRange = []
@@ -188,7 +191,7 @@ def generate_row_image(src: Source) -> list:
     if len(heights) > 0:
         gapStart = heights[0]
         for i in range(1, len(heights)):
-            if heights[i] - heights[i-1] > 128:
+            if heights[i] - heights[i-1] > 192:
                 gapRange.append((gapStart, heights[i-1]))
                 gapStart = heights[i]
         gapRange.append((gapStart, heights[-1]))
@@ -197,7 +200,7 @@ def generate_row_image(src: Source) -> list:
     RowImages = []
     relativeFloor = 0
     for i in range(len(gapRange) - 1):
-        if gapRange[i+1][1] - gapRange[i][0] > 128:
+        if gapRange[i+1][1] - gapRange[i][0] > 192:
             y1 = int(gapRange[i][0] * dst.shape[0] / scaledDst.shape[0])
             y2 = int(gapRange[i+1][1] * dst.shape[0] / scaledDst.shape[0])
             RowImages.append(RowImage(dst[y1:y2, :], src, relativeFloor))
