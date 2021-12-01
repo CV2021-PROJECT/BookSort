@@ -22,7 +22,7 @@ def get_books_from_directory(source_dir, verbose=True):
         # build source
         source_path = os.path.join(source_dir, file_name)
         source = read_image(source_path)
-        #source = rectify(source)
+        source = rectify(source)
         if type(source) != type(None):
             source = Source(source, source_path)
             source_list.append(source)
@@ -35,6 +35,13 @@ def get_books_from_directory(source_dir, verbose=True):
 
     print("# of row-image = {}".format(len(row_image_list)))
 
+    # fill info in each row images
+    fill_matching_info(row_image_list)
+
+    if verbose:
+        display_vertical_matching_result(row_image_list)
+        display_horizontal_matching_result(row_image_list)
+
     # segment books from each row images
     book_spines = BookSpines(row_image_list, verbose=False)
     books = book_spines.get_books()
@@ -44,15 +51,8 @@ def get_books_from_directory(source_dir, verbose=True):
     if verbose:
         show_image_grid(
             [book.rect()[0] for book in books],
-            int(math.sqrt(len(books) / 10))
+            int(math.sqrt(len(books) * 10))
         )
-
-    # fill info in each row images
-    fill_matching_info(row_image_list)
-
-    if verbose:
-        display_vertical_matching_result(row_image_list)
-        display_horizontal_matching_result(row_image_list)
 
 
 if __name__ == "__main__":

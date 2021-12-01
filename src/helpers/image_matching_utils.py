@@ -75,7 +75,7 @@ def get_inliers_error(p1, p2, H, thr):
     return inliers_1, inliers_2, np.sum(e)
 
 
-def find_optimal_H(p1, p2, thr, p_ransac=0.95, runtime_bound=1000):
+def find_optimal_H(p1, p2, thr, p_ransac=0.99, runtime_bound=1000):
     H_optimal = None
     N, count = float("inf"), 0
     num_of_inliers_max = -float("inf")
@@ -136,6 +136,7 @@ def get_corr_keypoints(img1, kp1, des1, img2, kp2, des2, thr, verbose=False):
         match = cv2.drawMatchesKnn(img1, kp1, img2, kp2, matches, None, **draw_params)
 
         cv2.imshow("match", match)
+        cv2.waitKey(0)
 
     matched_kp1 = []
     matched_kp2 = []

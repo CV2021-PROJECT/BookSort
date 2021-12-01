@@ -7,14 +7,20 @@ from models import *
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-down_sampling_rate = 4
+down_sampling_rate = 8
 
-def down_sampling(img):
+def down_sampling(img, rate=down_sampling_rate):
     h, w = img.shape[:2]
-    img = cv2.resize(img, (w//down_sampling_rate, h//down_sampling_rate))
+    img = cv2.resize(img, (w//rate, h//rate))
 
     return img
     
+def scale_matrix(s):
+    return np.array([
+        [s, 0, 0],
+        [0, s, 0],
+        [0, 0, 1]
+        ])
 
 def is_identical_row(img1, img2):
     """
@@ -66,7 +72,7 @@ def match_row(
     des2 = row2.des
 
     corr_kp1, corr_kp2 = get_corr_keypoints(
-        img1, kp1, des1, img2, kp2, des2, thr=thr_match_nms, verbose=verbose
+        img1, kp1, des1, img2, kp2, des2, thr=thr_match_nms, verbose=False
     )
     assert len(corr_kp1) == len(corr_kp2), "Key Point matching 잘못된 듯?"
 
@@ -76,14 +82,16 @@ def match_row(
 
     if type(H_1_to_2) == type(None): return False, None
 
-    # undo down sampling
-    #H_1_to_2 = np.array([[down_sampling_rate, 0, 0], [0, down_sampling_rate, 0], [0, 0, 1]]) @ H_1_to_2
-    
     img1_on_2 = warp_image(img1, img2, H_1_to_2)
 
     if verbose:
+        #cv2.imshow("img1_on_2_target", down_sampling(warp_image(row1.img, row2.img, H_1_to_2), 8))
         cv2.imshow("img1_on_2", img1_on_2)
         cv2.imshow("img2", img2)
+        cv2.waitKey(0)
+
+    # undo down sampling
+    H_1_to_2 = scale_matrix(down_sampling_rate) @ H_1_to_2 @ scale_matrix(1/down_sampling_rate)
 
     return is_identical_row(img1_on_2, img2), H_1_to_2
 
