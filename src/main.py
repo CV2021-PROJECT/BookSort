@@ -17,7 +17,7 @@ def get_books_from_directory(source_dir, verbose=True):
     row_image_list = []
     book_list = None
 
-    for file_name in os.listdir(source_dir)[3:4]:
+    for file_name in os.listdir(source_dir):
         # build source
         source_path = os.path.join(source_dir, file_name)
         source = read_image(source_path)
@@ -32,16 +32,12 @@ def get_books_from_directory(source_dir, verbose=True):
     # build row images
     for source in source_list:
         row_image_list.extend(generate_row_image(source)[1:])
-        for r in row_image_list:
-            show_image(r.img)
-            # BookSpines.plot_image(r.img)
 
     print("# of row-image = {}".format(len(row_image_list)))
 
     # segment books from each row images
-    book_spines = BookSpines(row_image_list, verbose=True)
+    book_spines = BookSpines(row_image_list, verbose=False)
     books = book_spines.get_books()
-    raise RuntimeError
 
     print("# of book = {}".format(len(books)))
 
@@ -58,8 +54,10 @@ def get_books_from_directory(source_dir, verbose=True):
 if __name__ == '__main__':
 
     data_dir = os.path.join(os.path.dirname(__file__), "data")
-    source_before_dir = os.path.join(data_dir, "서가5_시점t_세로만")
-    source_after_dir = os.path.join(data_dir, "서가5_시점t+1_세로만")
+    # source_before_dir = os.path.join(data_dir, "서가5_시점t_세로만")
+    # source_after_dir = os.path.join(data_dir, "서가5_시점t+1_세로만")
+    source_before_dir = os.path.join(data_dir, "서가6_시점t_가로세로둘다")
+    source_after_dir = os.path.join(data_dir, "서가6_시점t+1_가로세로둘다")
 
 
     get_books_from_directory(source_before_dir)
