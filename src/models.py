@@ -59,9 +59,11 @@ class Book:
         Args:
             row_image (RowImage): 책의 출처 이미지를 나타낸다. 높이는 1000으로 고정되어 있다.
             corner (np.ndarray): 책의 꼭지점 4개의 좌표를 (반)시계방향으로 (4, 2) 행렬로 나타낸다.
+            position (int, int): 책의 위치(가로, 세로)
         """
         self.row_image = row_image
         self.corner = corner
+        self.position = None
 
     def rect(self):
         """

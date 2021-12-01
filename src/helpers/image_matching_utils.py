@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import math
+import time
 
 
 FLANN_INDEX_KDTREE = 0
@@ -49,33 +50,29 @@ def get_inliers_error(p1, p2, H, thr):
     except:
         return [], [], float("inf")
 
-    H_p1 = [
-        homogeneous_to_tuple(
-            np.dot(H_inv, tuple_to_homogeneous((p1[idx][0], p1[idx][1])))
-        )
-        for idx in range(len(p1))
-    ]
-    H_p2 = [
-        homogeneous_to_tuple(np.dot(H, tuple_to_homogeneous((p2[idx][0], p2[idx][1]))))
-        for idx in range(len(p2))
-    ]
+    p1 = np.array(p1).reshape(-1, 1, 2)
+    p2 = np.array(p2).reshape(-1, 1, 2)
 
-    e1 = np.square(np.array(H_p1) - np.array(p2))
-    e1 = np.sum(e1, axis=1)
-    e2 = np.square(np.array(H_p2) - np.array(p1))
-    e2 = np.sum(e2, axis=1)
-    e = e1 + e2
+    H_p1 = cv2.perspectiveTransform(p1, H_inv)
+    H_p2 = cv2.perspectiveTransform(p2, H)
 
-    inlier_index = np.where(e < 2 * len(p1) * thr ** 2)[0]
-    inliers_1 = np.array(p1)[inlier_index]
-    inliers_2 = np.array(p2)[inlier_index]
-    inliers_1 = [(a[0], a[1]) for a in inliers_1]
-    inliers_2 = [(a[0], a[1]) for a in inliers_2]
+    e1 = np.square(H_p1 - p2)
+    e1 = np.sum(e1, axis=(1, 2))
+    e2 = np.square(H_p2 - p1)
+    e2 = np.sum(e2, axis=(1, 2))
+    e = np.sqrt((e1 + e2) / 2)
+
+    inlier_index = np.where(e < thr)[0]
+    inliers_1 = p1[inlier_index]
+    inliers_2 = p2[inlier_index]
+
+    inliers_1 = [(pt[0,0], pt[0,1]) for pt in inliers_1]
+    inliers_2 = [(pt[0,0], pt[0,1]) for pt in inliers_2]
 
     return inliers_1, inliers_2, np.sum(e)
 
 
-def find_optimal_H(p1, p2, thr, runtime_bound=1000):
+def find_optimal_H(p1, p2, thr, p_ransac=0.95, runtime_bound=1000):
     H_optimal = None
     N, count = float("inf"), 0
     num_of_inliers_max = -float("inf")
@@ -100,7 +97,7 @@ def find_optimal_H(p1, p2, thr, runtime_bound=1000):
 
         eps = 1 - n_in / len(p1)
         N = (
-            math.log(1 - 0.95) / math.log(1 - (1 - eps) ** 4)
+            math.log(1 - p_ransac) / math.log(1 - (1 - eps) ** 4)
             if 0 < eps < 1
             else np.float('inf')
         )
@@ -109,10 +106,6 @@ def find_optimal_H(p1, p2, thr, runtime_bound=1000):
         if count > runtime_bound: return None
 
     #print("hello1", count, N)
-
-    # print(num_of_inliers_max)
-    # print(inliers_1)
-    # print(inliers_2)
 
     return get_H(best_inliers_1, best_inliers_2)
 
