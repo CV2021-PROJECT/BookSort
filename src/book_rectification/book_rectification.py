@@ -62,7 +62,7 @@ def refineModel(model, edgelets):
     vanish = vt[-1, :]
     return vanish, nextEdgelets
 
-def rectify(src, sigma=11, cannyLow=20, cannyHigh=50, voteThreshold=250, minLineLength=250, maxLineGap=50):
+def rectify(src, sigma=11, cannyLow=20, cannyHigh=50, voteThreshold=200, minLineLength=200, maxLineGap=30):
     """
     Args:
         src : source image (ndarray)
@@ -193,7 +193,7 @@ def generate_row_image(src: Source) -> list:
     RowImages = []
     relativeFloor = 0
     for i in range(len(gapRange) - 1):
-        if gapRange[i+1][1] - gapRange[i][0] > 256:
+        if gapRange[i+1][1] - gapRange[i][0] > 192:
             y1 = int(gapRange[i][0] * dst.shape[0] / scaledDst.shape[0])
             y2 = int(gapRange[i+1][1] * dst.shape[0] / scaledDst.shape[0])
             RowImages.append(RowImage(dst[y1:y2, :], src, relativeFloor))
