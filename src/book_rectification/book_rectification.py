@@ -143,15 +143,14 @@ def generate_row_image(src: Source) -> list:
     dst = src.img
 
     # Find horizontal edges
-    scaledDst = cv2.resize(dst, (1000, int(dst.shape[0] / dst.shape[1] * 1000)))
-    bDst = cv2.GaussianBlur(scaledDst, (5, 5), 0)
-    edgeMask = cv2.Canny(bDst, 50, 70)
+    scaledDst = cv2.resize(dst, (250, int(dst.shape[0] / dst.shape[1] * 250)))
+    bDst = cv2.GaussianBlur(scaledDst, (7, 7), 0)
+    edgeMask = cv2.Canny(bDst, 20, 50)
     kernel = np.zeros((5, 5), dtype=np.uint8)
     kernel[2, :] = 1
     edgeMaskEroded = cv2.erode(edgeMask, kernel, iterations=1)
-    lines = cv2.HoughLines(edgeMaskEroded, 1, np.pi / 180, 150)
+    lines = cv2.HoughLines(edgeMaskEroded, 1, np.pi / 180, 50)
 
-    
     '''
     # Debugging purpose
     scaledDst2 = scaledDst.copy()
@@ -186,7 +185,7 @@ def generate_row_image(src: Source) -> list:
     if len(heights) > 0:
         gapStart = heights[0]
         for i in range(1, len(heights)):
-            if heights[i] - heights[i-1] > 192:
+            if heights[i] - heights[i-1] > 48:
                 gapRange.append((gapStart, heights[i-1]))
                 gapStart = heights[i]
         gapRange.append((gapStart, heights[-1]))
@@ -195,7 +194,7 @@ def generate_row_image(src: Source) -> list:
     RowImages = []
     relativeFloor = 0
     for i in range(len(gapRange) - 1):
-        if gapRange[i+1][1] - gapRange[i][0] > 192:
+        if gapRange[i+1][1] - gapRange[i][0] > 48:
             y1 = int(gapRange[i][0] * dst.shape[0] / scaledDst.shape[0])
             y2 = int(gapRange[i+1][1] * dst.shape[0] / scaledDst.shape[0])
             RowImages.append(RowImage(dst[y1:y2, :], src, relativeFloor))
