@@ -77,6 +77,7 @@ class BookSpines:
         self.row_images = row_images
         self.verbose = verbose
         self.books = []
+        self.hough_lines = []
 
     @staticmethod
     def plot_image(img: np.ndarray):
@@ -91,7 +92,7 @@ class BookSpines:
             print(f"-------------{label}-------------")
             self.plot_image(img)
 
-    def gaussian_blur(self, img: np.ndarray, sigma=3) -> np.ndarray:
+    def gaussian_blur(self, img: np.ndarray, sigma=1) -> np.ndarray:
         blur = scipy.ndimage.filters.gaussian_filter(img, sigma=(sigma, sigma))
         self.show_if_verbose(blur, "gaussian_blur")
         return blur
@@ -109,7 +110,7 @@ class BookSpines:
         return upsampled
 
     def sobel_vertical(self, img: np.ndarray) -> np.ndarray:
-        sobel = cv2.Sobel(img, cv2.CV_64F, 1, 0) ** 2
+        sobel = np.sqrt(cv2.Sobel(img, cv2.CV_64F, 1, 0)**2)
         self.show_if_verbose(sobel, "sobel_vertical")
         return sobel
 
@@ -167,8 +168,6 @@ class BookSpines:
             ptp = np.ptp(bright_pixels[0])
             ptps.append(ptp)
 
-        # Determine which lines to drop
-        if len(ptps) == 0: return img
         threshold = np.max(ptps) / 2.0
         for i in range(len(ptps)):
             if ptps[i] < threshold:
@@ -178,7 +177,7 @@ class BookSpines:
         for drop_value in drop_values:
             img[img == drop_value] = 0
         self.show_if_verbose(img, "remove_short_lines_vertical")
-        return img
+        return img, n_features
 
     def binarize_to_one(self, img: np.ndarray) -> np.ndarray:
         img[img > 0] = 1
@@ -240,6 +239,7 @@ class BookSpines:
             temp = img.copy()
             temp[level != img] = 0
             rho_thetas = cv2.HoughLines(temp.astype(np.uint8), 1, np.pi / 180, 0)
+            self.hough_lines = rho_thetas
             if rho_thetas is None:
                 continue
             # line = convert_to_xy(rho_thetas[:1], max_length=4000)
@@ -271,28 +271,34 @@ class BookSpines:
         if x_diff == 0:
             y = _arange(start[1], end[1])
             x = np.full(len(y), start[0])
+            print('special case', x, y)
             return zip(x.astype(int), y.astype(int))
 
         m = (end[1] - start[1]) / (end[0] - start[0])
+        c = end[1] - start[1] * m
         if x_diff >= y_diff:
             x = _arange(start[0], end[0])
             y = m * (x - start[0]) + start[1]
         else:
-            y = _arange(start[1], end[1])
-            x = (y - start[1]) / m + start[0]
+
+            x = _arange(start[0], end[0])
+            y = m * x + 1
+            # x = (y - start[1]) / m + start[0]
         return zip(x.astype(int), y.astype(int))  # [(x0,y0), (x1,y1), ...]
 
     def HoughLineSegments(self, lrho, ltheta, binary_img: np.ndarray):
         ret_list = []
+        self.segments = []
         for i, (rho, theta) in enumerate(zip(lrho, ltheta)):
             start_coord, end_coord = self.GetStartEndPoints(rho, theta)
+            self.segments.append(dict(start=start_coord, end=end_coord))
             temp_list = []
             seg_dict = dict()
             for (x, y) in self.GetAllPointsBetween(start_coord, end_coord):
-                if not (
-                    binary_img.shape[1] >= x >= 1 and binary_img.shape[0] >= y >= 1
-                ):
-                    continue
+                # if not (
+                #     binary_img.shape[1] >= x >= 1 and binary_img.shape[0] >= y >= 1
+                # ):
+                #     continue
                 try:
                     if np.max(binary_img[y - 4 : y + 5, x - 4 : x + 5]) == 1:
                         this_coord = np.array([x, y])
@@ -326,15 +332,17 @@ class BookSpines:
     def get_book_spines(self, row_image: RowImage):
         img = row_image.img
         _img = np.mean(img, axis=2)
+        self.verbose = False
         _img = self.gaussian_blur(_img)
         _img = self.sobel_vertical(_img)
-        _img = self.downsample(_img)
+        _img = self.downsample(_img, iterations=1)
         _img = self.normalize(_img)
         _img = self.adaptive_binarize(_img)
         _img = self.vertical_erode(_img)
         _img = self.vertical_dilate(_img)
+        self.verbose = True
         _img, n_features = self.group_lines(_img)
-        _img = self.remove_short_lines_vertical(_img, n_features=n_features)
+        _img, n_features = self.remove_short_lines_vertical(_img, n_features=n_features)
         _img = resize_img(_img, target_height=img.shape[0], target_width=img.shape[1])
         binary_img = self.binarize_to_one(_img)
         _img, n_features = self.group_lines(binary_img)
@@ -350,18 +358,18 @@ class BookSpines:
             new_book = Book(row_image=row_image, corner=corner)
             self.books.append(new_book)
 
-        if self.verbose:
-            new_img = img.copy()
-            plt.figure(figsize=(16, 12))
-            plt.imshow(new_img, cmap="gray", interpolation="none")
-            for segment in segments:
-                ((x0, y0), (x1, y1)) = (segment["start"], segment["end"])
-                plt.plot([x0, x1], [y0, y1], color=np.array([0, 169, 55]) / 255.0, lw=5)
-            plt.xlim(0, img.shape[1])
-            plt.ylim(img.shape[0], 0)
-            plt.xticks([])
-            plt.yticks([])
-            plt.show()
+        # if self.verbose:
+        new_img = img.copy()
+        plt.figure(figsize=(16, 12))
+        plt.imshow(new_img, cmap="gray", interpolation="none")
+        for segment in segments:
+            ((x0, y0), (x1, y1)) = (segment["start"], segment["end"])
+            plt.plot([x0, x1], [y0, y1], color=np.array([0, 169, 55]) / 255.0, lw=5)
+        plt.xlim(0, img.shape[1])
+        plt.ylim(img.shape[0], 0)
+        plt.xticks([])
+        plt.yticks([])
+        plt.show()
 
     def get_books(self) -> List[Book]:
         for row_image in self.row_images:
@@ -373,19 +381,26 @@ class BookSpines:
 if __name__ == "__main__":
     # Prepare RowImages
     paths = [
-        "./sample_inputs/sample1.jpeg",
-        "./sample_inputs/sample2.jpeg",
-        "./sample_inputs/sample3.jpeg",
+        # "./sample_inputs/sample1.jpeg",
+        # "./sample_inputs/sample2.jpeg",
+        # "./sample_inputs/sample3.jpeg",
         # "./sample_inputs/sample4.jpeg",
-        "./sample_inputs/sample5.jpg",
+        # "./sample_inputs/sample5.jpg",
+        # "./sample_inputs/sample6.jpg",
+        # "./sample_inputs/sample7.jpg",
+        # "./sample_inputs/row1.png",
+        # "./sample_inputs/row2.png",
+        "./sample_inputs/row3.png",
     ]
     row_images = []
     for i, path in enumerate(paths, 1):
         np_image = read_image(path)
-        row_images.append(RowImage(np_image, source=Source(np_image, path), relative_floor=1))
+        row_images.append(
+            RowImage(np_image, source=Source(np_image, path), relative_floor=1)
+        )
 
-    book_spines = BookSpines(row_images=row_images, verbose=False)
+    book_spines = BookSpines(row_images=row_images, verbose=True)
     books = book_spines.get_books()
-    for book in books:
-        rect, _ = book.rect()
-        show_image(rect)
+    # for book in books:
+    #     rect, _ = book.rect()
+    #     show_image(rect)
