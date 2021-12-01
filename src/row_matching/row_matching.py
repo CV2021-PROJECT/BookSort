@@ -46,12 +46,24 @@ def match_row(
     img1 = row1.img
     img2 = row2.img
 
-    kp1, kp2 = get_corr_keypoints(img1, img2, thr=thr_match_nms, verbose=verbose)
-    assert len(kp1) == len(kp2), "Key Point matching 잘못된 듯?"
+    if not hasattr(row1, "kp"):
+        row1.kp, row1.des = get_kp_desc(img1)
+    if not hasattr(row2, "des"):
+        row2.kp, row2.des = get_kp_desc(img2)
 
-    if len(kp1) < 4: return False, None
+    kp1 = row1.kp
+    kp2 = row2.kp
+    des1 = row1.des
+    des2 = row2.des
 
-    H_1_to_2 = find_optimal_H(kp2, kp1, thr=thr_inlier_pixel)
+    corr_kp1, corr_kp2 = get_corr_keypoints(
+        img1, kp1, des1, img2, kp2, des2, thr=thr_match_nms, verbose=verbose
+    )
+    assert len(corr_kp1) == len(corr_kp2), "Key Point matching 잘못된 듯?"
+
+    if len(corr_kp1) < 4: return False, None
+
+    H_1_to_2 = find_optimal_H(corr_kp2, corr_kp1, thr=thr_inlier_pixel)
 
     if type(H_1_to_2) == type(None): return False, None
     
@@ -168,7 +180,33 @@ def display_vertical_matching_result(row_image_list):
             plt.axis('off')
     plt.show()
     plt.close()
+
+def display_horizontal_matching_result(row_image_list):
+    row_group = dict() # absolute floor -> [RowImage, ...]
+    for row_image in row_image_list:
+        floor = row_image.absolute_floor
+        if not floor in row_group:
+            row_group[floor] = []
+        row_group[floor].append(row_image)
+
+    grid_row = len(row_group)
+    
+    plt.figure()
+    for i, (_, group) in enumerate(row_group.items()):
+        img_list = []
+        H_list = []
+        for row_image in group:
+            img_list.append(row_image.img)
+            H_list.append(row_image.homography_in_row)
             
+        merged = merge_images(img_list, H_list)
+        
+        plt.subplot(grid_row, 1, i+1)
+        plt.imshow(merged)
+        plt.axis('off')
+    plt.show()
+    plt.close()
+        
 
 if __name__ == "__main__":
     source_list = []
@@ -187,35 +225,4 @@ if __name__ == "__main__":
         
     fill_matching_info(row_image_list)
 
-    row_group = dict() # absolute floor -> [RowImage, ...]
-    for row_image in row_image_list:
-        floor = row_image.absolute_floor
-        if not floor in row_group:
-            row_group[floor] = []
-        row_group[floor].append(row_image)
-
-    if False:
-        for position, group in row_group.items():
-            plt.figure()
-            for i, row_image in enumerate(group):
-                plt.subplot(len(group), 1, i+1)
-                plt.imshow(row_image.img)
-                plt.axis('off')
-            plt.show()
-            plt.close()
-
-    if True:
-        for position, group in row_group.items():
-            img_list = []
-            H_list = []
-            for row_image in group:
-                img_list.append(row_image.img)
-                H_list.append(row_image.homography_in_row)
-                
-            merged = merge_images(img_list, H_list)
-            
-            plt.figure()
-            plt.imshow(merged)
-            plt.axis('off')
-            plt.show()
-            plt.close()
+    display_horizontal_matching_result(row_image_list)

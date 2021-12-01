@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from models import *
 from helpers import show_image_grid, show_image, read_image, resize_img
 from book_rectification import rectify, generate_row_image
-from row_matching import fill_matching_info, display_vertical_matching_result
+from row_matching import fill_matching_info, display_vertical_matching_result, display_horizontal_matching_result
 from book_segmentation import BookSpines
 
 
@@ -49,7 +49,7 @@ def get_books_from_directory(source_dir, verbose=True):
 
     if verbose:
         display_vertical_matching_result(row_image_list)
-        
+        display_horizontal_matching_result(row_image_list)
 
 
 
@@ -60,3 +60,4 @@ source_after_dir = os.path.join(data_dir, "source-after")
 
 
 get_books_from_directory(source_before_dir)
+#get_books_from_directory(source_after_dir)

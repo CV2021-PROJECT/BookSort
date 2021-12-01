@@ -9,6 +9,9 @@ index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
 search_params = dict(checks=50)
 flann = cv2.FlannBasedMatcher(index_params, search_params)
 
+sift = cv2.xfeatures2d.SIFT_create()
+
+
 def tuple_to_homogeneous(t):
     return np.expand_dims(np.array(t + (1,)), -1)
 
@@ -110,12 +113,12 @@ def find_optimal_H(p1, p2, thr, p_ransac=0.95, runtime_bound=1000):
     return get_H(best_inliers_1, best_inliers_2)
 
 
-def get_corr_keypoints(img1, img2, thr, verbose=False):
-    sift = cv2.xfeatures2d.SIFT_create()
+def get_kp_desc(img):
+    kp, desc = sift.detectAndCompute(img, None)
+    return kp, desc
 
-    kp1, des1 = sift.detectAndCompute(img1, None)
-    kp2, des2 = sift.detectAndCompute(img2, None)
 
+def get_corr_keypoints(img1, kp1, des1, img2, kp2, des2, thr, verbose=False):
     matches = flann.knnMatch(des1, des2, k=2)
     matchesMask = [[0, 0] for i in range(len(matches))]
 
@@ -164,6 +167,7 @@ def merge_images(img_list, H_list):
     for img, H in zip(img_list, H_list):
         h, w = img.shape[:2]
         corners = np.float32([[0, 0], [0, h], [w, 0], [w, h]]).reshape(-1,1,2)
+        print(corners)
         corners = cv2.perspectiveTransform(corners, H)
         all_corners.append([[corners]])
 
