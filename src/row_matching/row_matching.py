@@ -1,4 +1,5 @@
 import sys
+import cv2
 sys.path.append("..")
 
 from helpers import *
@@ -6,6 +7,20 @@ from models import *
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+down_sampling_rate = 8
+
+def down_sampling(img, rate=down_sampling_rate):
+    h, w = img.shape[:2]
+    img = cv2.resize(img, (w//rate, h//rate))
+
+    return img
+    
+def scale_matrix(s):
+    return np.array([
+        [s, 0, 0],
+        [0, s, 0],
+        [0, 0, 1]
+        ])
 
 def is_identical_row(img1, img2):
     """
@@ -26,7 +41,7 @@ def is_identical_row(img1, img2):
     rms_diff = np.sqrt(np.sum(diff * diff) / (np.sum(mask) + 1e-6))
 
     #print("iou = {}, rms_diff = {}".format(iou, rms_diff))
-    return iou > 0.1 and rms_diff < 1
+    return iou > 0.1 and rms_diff < 0.75
 
 def match_row(
     row1: RowImage,
@@ -43,23 +58,40 @@ def match_row(
         thr_match_nms: Non Maximum Supression 할 때 필요한 값 (0~1, 작을수록 빡세게 supress 시키는거임)
         thr_inlier_pixel: Key Point 비교할 때 동일하다고 판단하기 위해 필요한 값 (0~inf)
     """
-    img1 = row1.img
-    img2 = row2.img
+    img1 = down_sampling(row1.img)
+    img2 = down_sampling(row2.img)
 
-    kp1, kp2 = get_corr_keypoints(img1, img2, thr=thr_match_nms, verbose=verbose)
-    assert len(kp1) == len(kp2), "Key Point matching 잘못된 듯?"
+    if not hasattr(row1, "kp"):
+        row1.kp, row1.des = get_kp_desc(img1)
+    if not hasattr(row2, "des"):
+        row2.kp, row2.des = get_kp_desc(img2)
 
-    if len(kp1) < 4: return False, None
+    kp1 = row1.kp
+    kp2 = row2.kp
+    des1 = row1.des
+    des2 = row2.des
 
-    H_1_to_2 = find_optimal_H(kp2, kp1, thr=thr_inlier_pixel)
+    corr_kp1, corr_kp2 = get_corr_keypoints(
+        img1, kp1, des1, img2, kp2, des2, thr=thr_match_nms, verbose=False
+    )
+    assert len(corr_kp1) == len(corr_kp2), "Key Point matching 잘못된 듯?"
+
+    if len(corr_kp1) < 4: return False, None
+
+    H_1_to_2 = find_optimal_H(corr_kp2, corr_kp1, thr=thr_inlier_pixel)
 
     if type(H_1_to_2) == type(None): return False, None
-    
+
     img1_on_2 = warp_image(img1, img2, H_1_to_2)
 
     if verbose:
+        #cv2.imshow("img1_on_2_target", down_sampling(warp_image(row1.img, row2.img, H_1_to_2), 8))
         cv2.imshow("img1_on_2", img1_on_2)
         cv2.imshow("img2", img2)
+        cv2.waitKey(0)
+
+    # undo down sampling
+    H_1_to_2 = scale_matrix(down_sampling_rate) @ H_1_to_2 @ scale_matrix(1/down_sampling_rate)
 
     return is_identical_row(img1_on_2, img2), H_1_to_2
 
@@ -168,7 +200,37 @@ def display_vertical_matching_result(row_image_list):
             plt.axis('off')
     plt.show()
     plt.close()
-            
+
+def display_horizontal_matching_result(row_image_list):
+    row_group = dict() # absolute floor -> [RowImage, ...]
+    for row_image in row_image_list:
+        floor = row_image.absolute_floor
+        if not floor in row_group:
+            row_group[floor] = []
+        row_group[floor].append(row_image)
+
+    grid_row = len(row_group)
+    
+    plt.figure()
+    for i, (_, group) in enumerate(row_group.items()):
+        img_list = []
+        H_list = []
+        
+        for row_image in group:
+            img = row_image.img
+            H = row_image.homography_in_row
+            if type(H) != type(None):
+                img_list.append(img)
+                H_list.append(H)
+                
+        merged = merge_images(img_list, H_list)
+        
+        plt.subplot(grid_row, 1, i+1)
+        plt.imshow(merged)
+        plt.axis('off')
+    plt.show()
+    plt.close()
+        
 
 if __name__ == "__main__":
     source_list = []
@@ -187,35 +249,4 @@ if __name__ == "__main__":
         
     fill_matching_info(row_image_list)
 
-    row_group = dict() # absolute floor -> [RowImage, ...]
-    for row_image in row_image_list:
-        floor = row_image.absolute_floor
-        if not floor in row_group:
-            row_group[floor] = []
-        row_group[floor].append(row_image)
-
-    if False:
-        for position, group in row_group.items():
-            plt.figure()
-            for i, row_image in enumerate(group):
-                plt.subplot(len(group), 1, i+1)
-                plt.imshow(row_image.img)
-                plt.axis('off')
-            plt.show()
-            plt.close()
-
-    if True:
-        for position, group in row_group.items():
-            img_list = []
-            H_list = []
-            for row_image in group:
-                img_list.append(row_image.img)
-                H_list.append(row_image.homography_in_row)
-                
-            merged = merge_images(img_list, H_list)
-            
-            plt.figure()
-            plt.imshow(merged)
-            plt.axis('off')
-            plt.show()
-            plt.close()
+    display_horizontal_matching_result(row_image_list)

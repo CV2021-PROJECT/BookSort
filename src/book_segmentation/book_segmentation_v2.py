@@ -87,6 +87,12 @@ class BookSpines:
         plt.yticks([])
         plt.show()
 
+    @staticmethod
+    def filter_aspect_ratio(corners):
+        w = np.max(corners[:,0]) - np.min(corners[:,0])
+        h = np.max(corners[:,1]) - np.min(corners[:,1])
+        return w / h < 0.25
+
     def show_if_verbose(self, img: np.ndarray, label: str):
         if self.verbose:
             print(f"-------------{label}-------------")
@@ -327,7 +333,7 @@ class BookSpines:
             if new_len > max_len:
                 max_len = new_len
                 max_dict = line_dict
-        return max_dict
+        return max_dict        
 
     def get_book_spines(self, row_image: RowImage):
         img = row_image.img
@@ -355,8 +361,10 @@ class BookSpines:
             seg1, seg2 = segments[i], segments[i + 1]
             lu, ld, rd, ru = seg1["start"], seg1["end"], seg2["end"], seg2["start"]
             corner = np.array([lu, ld, rd, ru]).astype(int)
-            new_book = Book(row_image=row_image, corner=corner)
-            self.books.append(new_book)
+            
+            if self.filter_aspect_ratio(corner):            
+                new_book = Book(row_image=row_image, corner=corner)
+                self.books.append(new_book)
 
         if self.verbose:
             new_img = img.copy()
