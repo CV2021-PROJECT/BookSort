@@ -24,7 +24,7 @@ def is_identical_image(img1, img2):
     rms_diff = np.sqrt(np.sum(diff * diff) / (np.sum(mask) + 1e-6))
 
     print("iou = {}, rms_diff = {}".format(iou, rms_diff))
-    return iou > 0.1 and rms_diff < 0.75
+    return iou > 0.5 and rms_diff < 0.75
 
 
 def match_book(
