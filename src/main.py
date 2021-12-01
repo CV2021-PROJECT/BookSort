@@ -31,12 +31,12 @@ def get_books_from_directory(source_dir, verbose=True):
 
     # build row images
     for source in source_list:
-        row_image_list.extend(generate_row_image(source)[1:])
+        row_image_list.extend(generate_row_image(source))
 
     print("# of row-image = {}".format(len(row_image_list)))
 
     # segment books from each row images
-    book_spines = BookSpines(row_image_list, verbose=False)
+    book_spines = BookSpines(row_image_list, verbose=True)
     books = book_spines.get_books()
 
     print("# of book = {}".format(len(books)))
@@ -51,14 +51,14 @@ def get_books_from_directory(source_dir, verbose=True):
         display_vertical_matching_result(row_image_list)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     data_dir = os.path.join(os.path.dirname(__file__), "data")
+    source_before_dir = os.path.join(data_dir, "source-before")
+    source_after_dir = os.path.join(data_dir, "source-after")
     # source_before_dir = os.path.join(data_dir, "서가5_시점t_세로만")
     # source_after_dir = os.path.join(data_dir, "서가5_시점t+1_세로만")
-    source_before_dir = os.path.join(data_dir, "서가6_시점t_가로세로둘다")
-    source_after_dir = os.path.join(data_dir, "서가6_시점t+1_가로세로둘다")
-
+    # source_before_dir = os.path.join(data_dir, "서가6_시점t_가로세로둘다")
+    # source_after_dir = os.path.join(data_dir, "서가6_시점t+1_가로세로둘다")
 
     get_books_from_directory(source_before_dir)
-
