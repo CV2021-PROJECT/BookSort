@@ -36,7 +36,7 @@ def get_books_from_directory(source_dir, verbose=True):
     print("# of row-image = {}".format(len(row_image_list)))
 
     # segment books from each row images
-    book_spines = BookSpines(row_image_list, verbose=True)
+    book_spines = BookSpines(row_image_list, verbose=False)
     books = book_spines.get_books()
 
     print("# of book = {}".format(len(books)))
