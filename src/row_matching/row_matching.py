@@ -1,4 +1,5 @@
 import sys
+import cv2
 sys.path.append("..")
 
 from helpers import *
@@ -6,6 +7,14 @@ from models import *
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+down_sampling_rate = 4
+
+def down_sampling(img):
+    h, w = img.shape[:2]
+    img = cv2.resize(img, (w//down_sampling_rate, h//down_sampling_rate))
+
+    return img
+    
 
 def is_identical_row(img1, img2):
     """
@@ -43,8 +52,8 @@ def match_row(
         thr_match_nms: Non Maximum Supression 할 때 필요한 값 (0~1, 작을수록 빡세게 supress 시키는거임)
         thr_inlier_pixel: Key Point 비교할 때 동일하다고 판단하기 위해 필요한 값 (0~inf)
     """
-    img1 = row1.img
-    img2 = row2.img
+    img1 = down_sampling(row1.img)
+    img2 = down_sampling(row2.img)
 
     if not hasattr(row1, "kp"):
         row1.kp, row1.des = get_kp_desc(img1)
@@ -66,6 +75,9 @@ def match_row(
     H_1_to_2 = find_optimal_H(corr_kp2, corr_kp1, thr=thr_inlier_pixel)
 
     if type(H_1_to_2) == type(None): return False, None
+
+    # undo down sampling
+    #H_1_to_2 = np.array([[down_sampling_rate, 0, 0], [0, down_sampling_rate, 0], [0, 0, 1]]) @ H_1_to_2
     
     img1_on_2 = warp_image(img1, img2, H_1_to_2)
 
