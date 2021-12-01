@@ -11,6 +11,7 @@ from helpers import show_image_grid, show_image, read_image, resize_img
 from book_rectification import rectify, generate_row_image
 from row_matching import fill_matching_info, display_vertical_matching_result, display_horizontal_matching_result
 from book_segmentation import BookSpines
+from book_matching import fill_position_info, show_grid_books
 
 
 def get_books_from_directory(source_dir, verbose=True):
@@ -42,17 +43,28 @@ def get_books_from_directory(source_dir, verbose=True):
         display_vertical_matching_result(row_image_list)
         display_horizontal_matching_result(row_image_list)
 
+    row_image_list = list(filter(
+        lambda row_image: type(row_image.homography_in_row) != type(None),
+        row_image_list
+    ))
+
+    print("# of matched row-image = {}".format(len(row_image_list)))
+
     # segment books from each row images
     book_spines = BookSpines(row_image_list, verbose=False)
-    books = book_spines.get_books()
+    book_list = book_spines.get_books()
 
-    print("# of book = {}".format(len(books)))
+    print("# of book = {}".format(len(book_list)))
 
     if verbose:
         show_image_grid(
-            [book.rect()[0] for book in books],
-            int(math.sqrt(len(books) * 10))
+            [book.rect()[0] for book in book_list],
+            int(math.sqrt(len(book_list) * 10))
         )
+
+    # positioning books
+    fill_position_info(book_list)
+    show_grid_books(book_list)
 
 
 if __name__ == "__main__":

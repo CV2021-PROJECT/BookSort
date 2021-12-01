@@ -1,5 +1,6 @@
 from typing import List, Tuple
 import numpy as np
+import cv2
 from helpers import crop_polygon, resize_img
 
 class Source:
@@ -65,6 +66,27 @@ class Book:
         self.corner = corner
         self.position = None
 
+    def get_global_corner(self):
+        """
+        Returns:
+            global_position: row 안에서의 위치
+        """
+        if not hasattr(self, "global_corner"):
+            self.global_corner = cv2.perspectiveTransform(
+                self.corner.reshape(-1, 1, 2).astype(np.float32),
+                self.row_image.homography_in_row.astype(np.float32),
+            )
+        return self.global_corner.reshape(-1, 2)
+
+    def get_center_x(self):
+        center = np.average(self.get_global_corner(), axis=0)
+        return center[0]
+
+    def get_width(self):
+        x_min = np.min(self.get_global_corner()[:, 0])
+        x_max = np.max(self.get_global_corner()[:, 0])
+        return x_max - x_min
+
     def rect(self):
         """
         Returns:
@@ -72,7 +94,9 @@ class Book:
             mask: 0/255 이미지
         """
         img = self.row_image.img
-        crop = crop_polygon(img, self.corner)
-        mask = crop_polygon(np.ones(img.shape).astype(np.uint8) * 255, self.corner)
+        if not hasattr(self, "crop"):
+            self.crop = crop_polygon(img, self.corner)
+        if not hasattr(self, "mask"):
+            self.mask = crop_polygon(np.ones(img.shape).astype(np.uint8) * 255, self.corner)
 
-        return crop, mask
+        return self.crop, self.mask

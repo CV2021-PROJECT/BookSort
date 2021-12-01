@@ -153,6 +153,10 @@ def fill_matching_info(row_image_list):
     for row_image in row_image_list:
         row_image.absolute_floor = source_floor_map[row_image.source] + row_image.relative_floor
 
+    min_abs_floor = min([row_image.absolute_floor for row_image in row_image_list])
+    for row_image in row_image_list:
+        row_image.absolute_floor = row_image.absolute_floor - min_abs_floor + 1
+
     same_floor_group = dict() # absolute floor -> [Int, ...]
 
     for i in range(len(row_image_list)):
