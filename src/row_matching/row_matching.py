@@ -26,7 +26,7 @@ def is_identical_row(img1, img2):
     rms_diff = np.sqrt(np.sum(diff * diff) / (np.sum(mask) + 1e-6))
 
     #print("iou = {}, rms_diff = {}".format(iou, rms_diff))
-    return iou > 0.1 and rms_diff < 1
+    return iou > 0.1 and rms_diff < 0.75
 
 def match_row(
     row1: RowImage,
@@ -195,10 +195,14 @@ def display_horizontal_matching_result(row_image_list):
     for i, (_, group) in enumerate(row_group.items()):
         img_list = []
         H_list = []
+        
         for row_image in group:
-            img_list.append(row_image.img)
-            H_list.append(row_image.homography_in_row)
-            
+            img = row_image.img
+            H = row_image.homography_in_row
+            if type(H) != type(None):
+                img_list.append(img)
+                H_list.append(H)
+                
         merged = merge_images(img_list, H_list)
         
         plt.subplot(grid_row, 1, i+1)

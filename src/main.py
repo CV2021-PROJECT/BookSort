@@ -19,9 +19,8 @@ def get_books_from_directory(source_dir, verbose=True):
         # build source
         source_path = os.path.join(source_dir, file_name)
         source = read_image(source_path)
-        source = resize_img(source, 1000).astype(np.uint8)
-        # TODO> 재윤님이 rectify를 고쳐주신다면,, 그건 어떤 기분일까?
-        #source = rectify(source)
+        source = resize_img(source, 500).astype(np.uint8)
+        source = rectify(source)
         
         if type(source) != type(None):
             source = Source(source, source_path)

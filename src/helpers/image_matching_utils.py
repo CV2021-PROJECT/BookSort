@@ -167,7 +167,6 @@ def merge_images(img_list, H_list):
     for img, H in zip(img_list, H_list):
         h, w = img.shape[:2]
         corners = np.float32([[0, 0], [0, h], [w, 0], [w, h]]).reshape(-1,1,2)
-        print(corners)
         corners = cv2.perspectiveTransform(corners, H)
         all_corners.append([[corners]])
 
