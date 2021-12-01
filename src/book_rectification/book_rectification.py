@@ -19,12 +19,12 @@ class Edgelet:
 
     def getModel(self, others):
         model = np.cross(self.line, others.line)
-        model = model / np.max(np.abs(model)) # scaling
+        model = model / (np.max(np.abs(model)) + 1e-5) # scaling
         return model
 
     def applyModel(self, model, threshold):
         vec = (model[0:2] - np.array(self.center) * model[2])
-        vec = vec / np.linalg.norm(vec)
+        vec = vec / (np.linalg.norm(vec) + 1e-5)
         angle = np.arccos(min(np.abs(np.dot(vec, self.direction)), 1))
         if angle < threshold * np.pi / 180:
             return self.strength 
@@ -62,7 +62,7 @@ def refineModel(model, edgelets):
     vanish = vt[-1, :]
     return vanish, nextEdgelets
 
-def rectify(src, sigma=11, cannyLow=20, cannyHigh=50, voteThreshold=200, minLineLength=200, maxLineGap=30):
+def rectify(src, sigma=11, cannyLow=20, cannyHigh=50, voteThreshold=100, minLineLength=30, maxLineGap=3):
     """
     Args:
         src : source image (ndarray)
@@ -176,7 +176,9 @@ def generate_row_image(src: Source) -> list:
             rho = lines[i][0][0]
             theta = lines[i][0][1]
             if abs(theta - np.pi / 2) < 0.1:
-                heights.append((rho - (scaledDst.shape[1] - 1) / 2 * np.cos(theta)) / np.sin(theta))
+                height = (rho - (scaledDst.shape[1] - 1) / 2 * np.cos(theta)) / np.sin(theta)
+                if height >= 0 and height < scaledDst.shape[0] - 1:
+                    heights.append(height)
 
     heights.sort()
     gapRange = []
@@ -184,7 +186,7 @@ def generate_row_image(src: Source) -> list:
     if len(heights) > 0:
         gapStart = heights[0]
         for i in range(1, len(heights)):
-            if heights[i] - heights[i-1] > 128:
+            if heights[i] - heights[i-1] > 192:
                 gapRange.append((gapStart, heights[i-1]))
                 gapStart = heights[i]
         gapRange.append((gapStart, heights[-1]))
