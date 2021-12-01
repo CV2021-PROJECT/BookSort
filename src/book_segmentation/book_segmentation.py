@@ -133,7 +133,10 @@ def convert_to_xy(
         y2 = int(y0 - max_length * a)
         point1 = (x1, y1)
         point2 = (x2, y2)
-        points.append((point1, point2))
+        if y1 < y2:
+            points.append((point1, point2))
+        else:
+            points.append((point2, point1))
     return points
 
 

@@ -1,7 +1,9 @@
+#%%
 import sys, os
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy
 
 from models import *
 from helpers import show_image_grid, show_image, read_image, resize_img
@@ -14,15 +16,13 @@ def get_books_from_directory(source_dir, verbose=True):
     source_list = []
     row_image_list = []
     book_list = None
-    
+
     for file_name in os.listdir(source_dir):
         # build source
         source_path = os.path.join(source_dir, file_name)
         source = read_image(source_path)
-        source = resize_img(source, 1000).astype(np.uint8)
-        # TODO> 재윤님이 rectify를 고쳐주신다면,, 그건 어떤 기분일까?
-        #source = rectify(source)
-        
+        source = rectify(source)
+
         if type(source) != type(None):
             source = Source(source, source_path)
             source_list.append(source)
@@ -49,14 +49,16 @@ def get_books_from_directory(source_dir, verbose=True):
 
     if verbose:
         display_vertical_matching_result(row_image_list)
-        
 
 
+if __name__ == "__main__":
 
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+    source_before_dir = os.path.join(data_dir, "source-before")
+    source_after_dir = os.path.join(data_dir, "source-after")
+    # source_before_dir = os.path.join(data_dir, "서가5_시점t_세로만")
+    # source_after_dir = os.path.join(data_dir, "서가5_시점t+1_세로만")
+    # source_before_dir = os.path.join(data_dir, "서가6_시점t_가로세로둘다")
+    # source_after_dir = os.path.join(data_dir, "서가6_시점t+1_가로세로둘다")
 
-data_dir = os.path.join(os.path.dirname(__file__), "data")
-source_before_dir = os.path.join(data_dir, "source-before")
-source_after_dir = os.path.join(data_dir, "source-after")
-
-
-get_books_from_directory(source_before_dir)
+    get_books_from_directory(source_before_dir)
