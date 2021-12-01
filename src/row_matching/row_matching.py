@@ -4,6 +4,7 @@ sys.path.append("..")
 from helpers import *
 from models import *
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 def is_identical_row(img1, img2):
@@ -24,14 +25,14 @@ def is_identical_row(img1, img2):
     diff = img1_norm - img2_norm
     rms_diff = np.sqrt(np.sum(diff * diff) / (np.sum(mask) + 1e-6))
 
-    print("iou = {}, rms_diff = {}".format(iou, rms_diff))
-    return iou > 0.1 and rms_diff < 1.5
+    #print("iou = {}, rms_diff = {}".format(iou, rms_diff))
+    return iou > 0.1 and rms_diff < 1
 
 def match_row(
     row1: RowImage,
     row2: RowImage,
     thr_match_nms: float = 0.5,
-    thr_inlier_pixel: float = 0.1,
+    thr_inlier_pixel: float = 1,
     verbose: bool = False,
     ) -> (bool, np.ndarray):
     """
@@ -79,7 +80,7 @@ def fill_matching_info(row_image_list):
     horizontal_relation_table = [[None for _ in range(len(row_image_list))] for _ in range(len(row_image_list))] # 방향그래프 인접 테이블 // row_image{i}를 row_image{j}의 좌표계 위로 옮기는 homography H = Edge(i,j)
 
     # extract info. from matching image-pairs...
-    for i in range(len(row_image_list)):
+    for i in tqdm(range(len(row_image_list))):
         for j in range(i):
             row_i = row_image_list[i]
             row_j = row_image_list[j]
@@ -147,6 +148,26 @@ def fill_matching_info(row_image_list):
                 row_image_list[gi].homography_in_row = row_image_list[curr_index].homography_in_row @ horizontal_relation_table[gi][curr_index]
                 flag_list[gi] = True
                 queue.append(gi)
+
+def display_vertical_matching_result(row_image_list):
+    row_group = dict() # absolute floor -> [RowImage, ...]
+    for row_image in row_image_list:
+        floor = row_image.absolute_floor
+        if not floor in row_group:
+            row_group[floor] = []
+        row_group[floor].append(row_image)
+
+    grid_row = len(row_group)
+    grid_col = max([len(group) for _, group in row_group.items()])
+
+    plt.figure()
+    for i, (_, group) in enumerate(row_group.items()):
+        for j, row_image in enumerate(group):
+            plt.subplot(grid_row, grid_col, i*grid_col + j + 1)
+            plt.imshow(row_image.img)
+            plt.axis('off')
+    plt.show()
+    plt.close()
             
 
 if __name__ == "__main__":

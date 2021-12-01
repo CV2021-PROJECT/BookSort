@@ -85,9 +85,14 @@ def rectify(src, sigma=11, cannyLow=20, cannyHigh=50, voteThreshold=250, minLine
         l = linesP[i][0]
         edgelet = Edgelet((l[0], l[1]), (l[2], l[3]))
         edgelets.append(edgelet)
+        
+    if len(edgelets) < 2: return None
 
     model = generateBaseModel(edgelets)
     vanish1, edgelets = refineModel(model, edgelets)
+
+    if len(edgelets) < 2: return None
+    
     model = generateBaseModel(edgelets)
     vanish2, edgelets = refineModel(model, edgelets)
 
