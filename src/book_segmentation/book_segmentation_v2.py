@@ -317,9 +317,11 @@ class BookSpines:
                     if "start" in seg_dict and "end" in seg_dict:
                         temp_list.append(seg_dict)
                         seg_dict = dict()
-            if len(temp_list) == 0:
+            if len(temp_list) == 0 and "start" in seg_dict and "end" in seg_dict:
                 temp_list.append(seg_dict)
             longest_line = self.FindLongestLine(temp_list)
+            if longest_line is None:
+                continue
             ret_list.append(longest_line)
         return ret_list
 
@@ -327,8 +329,6 @@ class BookSpines:
         max_len = -1
         max_dict = None
         for line_dict in line_list:
-            if "start" not in line_dict or "end" not in line_dict:
-                continue
             new_len = np.hypot(*(line_dict["start"] - line_dict["end"]))
             if new_len > max_len:
                 max_len = new_len
