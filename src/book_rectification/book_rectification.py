@@ -137,7 +137,7 @@ def rectify(src, sigma=11, cannyLow=20, cannyHigh=50, voteThreshold=100, minLine
     
     return dst
 
-def generate_row_image(src: Source) -> list:
+def generate_row_image(src: Source, verbose = False, heightThreshold = 0.7) -> list:
     """
     Args:
         src : Source to split by rows
@@ -156,22 +156,21 @@ def generate_row_image(src: Source) -> list:
     edgeMaskEroded = cv2.erode(edgeMask, kernel, iterations=1)
     lines = cv2.HoughLines(edgeMaskEroded, 1, np.pi / 180, 50)
 
-    '''
-    # Debugging purpose
-    scaledDst2 = scaledDst.copy()
-    if lines is not None:
-        for i in range(0, len(lines)):
-            rho = lines[i][0][0]
-            theta = lines[i][0][1]
-            a = math.cos(theta)
-            b = math.sin(theta)
-            x0 = a * rho
-            y0 = b * rho
-            pt1 = (int(x0 + 1000*(-b)), int(y0 + 1000*(a)))
-            pt2 = (int(x0 - 1000*(-b)), int(y0 - 1000*(a)))
-            cv2.line(scaledDst2, pt1, pt2, (0,0,255), 3, cv2.LINE_AA)
-    show_image(scaledDst2)
-    '''
+    if verbose:
+        # Debugging purpose
+        scaledDst2 = scaledDst.copy()
+        if lines is not None:
+            for i in range(0, len(lines)):
+                rho = lines[i][0][0]
+                theta = lines[i][0][1]
+                a = math.cos(theta)
+                b = math.sin(theta)
+                x0 = a * rho
+                y0 = b * rho
+                pt1 = (int(x0 + 1000*(-b)), int(y0 + 1000*(a)))
+                pt2 = (int(x0 - 1000*(-b)), int(y0 - 1000*(a)))
+                cv2.line(scaledDst2, pt1, pt2, (0,0,255), 3, cv2.LINE_AA)
+        show_image(scaledDst2)
 
     # Grouping edges
     heights = []
@@ -204,15 +203,25 @@ def generate_row_image(src: Source) -> list:
             y2 = int(gapRange[i+1][1] * dst.shape[0] / scaledDst.shape[0])
             RowImages.append(RowImage(dst[y1:y2, :], src, relativeFloor))
             relativeFloor += 1
+    
+    # Delete partial (< 0.7) row
+    maxHeight = 0
+    for rowImage in RowImages:
+        maxHeight = max(rowImage.img.shape[0], maxHeight)
+    
+    filteredRowImages = []
+    for rowImage in RowImages:
+        if rowImage.img.shape[0] >= maxHeight * heightThreshold:
+            filteredRowImages.append(rowImage)
 
-    return RowImages
+    return filteredRowImages
 
 if __name__== '__main__':
     filepath = sys.argv[1]
     img = read_image(filepath)
     imgRect = rectify(img)
     src = Source(imgRect, filepath)
-    rowImages = generate_row_image(src)
+    rowImages = generate_row_image(src, verbose=True)
 
     for rowImage in rowImages:
         show_image(rowImage.img)
