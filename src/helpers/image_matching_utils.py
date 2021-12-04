@@ -75,7 +75,7 @@ def get_inliers_error(p1, p2, H, thr):
     return inliers_1, inliers_2, np.sum(e)
 
 
-def find_optimal_H(p1, p2, thr, p_ransac=0.995, runtime_bound=5000):
+def find_optimal_H(p1, p2, thr, p_ransac=0.99, runtime_bound=1000):
     H_optimal = None
     N, count = float("inf"), 0
     num_of_inliers_max = -float("inf")
@@ -99,16 +99,23 @@ def find_optimal_H(p1, p2, thr, p_ransac=0.995, runtime_bound=5000):
             error = e
 
         eps = 1 - n_in / len(p1)
-        N = (
-            math.log(1 - p_ransac) / math.log(1 - (1 - eps) ** 4)
-            if 0 < eps < 1
-            else np.float('inf')
-        )
+
+        if eps == 0:
+            N = 0
+        else:        
+            N = (
+                math.log(1 - p_ransac) / math.log(1 - (1 - eps) ** 4)
+                if 0 <= eps < 1
+                else np.float('inf')
+            )
+
         count += 1
+
+        #print("inliers={}, error={}, count/N={}/{}".format(n_in, e, count, N))
 
         if count > runtime_bound: return None
 
-    #print("hello1", count, N)
+    #print("[optimum] inliers={}, error={}, count/N={}/{}".format(num_of_inliers_max, error, count, N))
 
     return get_H(best_inliers_1, best_inliers_2)
 
