@@ -100,3 +100,35 @@ class Book:
             self.mask = crop_polygon(np.ones(img.shape).astype(np.uint8) * 255, self.corner)
 
         return self.crop, self.mask
+
+
+class BookGroup:
+    def __init__(self, position, book_list):
+        self.position = position
+        self.book_list = book_list
+
+    def get_first(self):
+        return self.book_list[0]
+
+    def add_book(self, book):
+        self.book_list.append(book)
+
+
+class BookTrajectory:
+    def __init__(self, bg_before, bg_after):
+        self.bg_before = bg_before
+        self.bg_after = bg_after
+
+    def __str__(self):
+        if type(self.bg_before) != type(None):
+            before_text = str(self.bg_before.position)
+        else:
+            before_text = "?"
+            
+        if type(self.bg_after) != type(None):
+            after_text = str(self.bg_after.position)
+        else:
+            after_text = "?"
+
+            
+        return "{} -> {}".format(before_text, after_text)

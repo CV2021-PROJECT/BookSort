@@ -355,6 +355,9 @@ class BookSpines:
 
         lrho, ltheta = self.get_hough_line_per_group(_img, n_features=n_features)
         segments = self.HoughLineSegments(lrho, ltheta, binary_img)
+        segments = list(filter(lambda x: type(x) != type(None), segments))
+        segments = list(filter(lambda x: type(x["start"]) != type(None), segments))
+        segments = list(filter(lambda x: type(x["end"]) != type(None), segments))
         segments.sort(key=lambda x: x["start"][0])
 
         for i in range(len(segments) - 1):

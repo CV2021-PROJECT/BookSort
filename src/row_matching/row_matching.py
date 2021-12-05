@@ -7,13 +7,7 @@ from models import *
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-down_sampling_rate = 8
-
-def down_sampling(img, rate=down_sampling_rate):
-    h, w = img.shape[:2]
-    img = cv2.resize(img, (w//rate, h//rate))
-
-    return img
+down_sampling_rate = 4
     
 def scale_matrix(s):
     return np.array([
@@ -22,32 +16,11 @@ def scale_matrix(s):
         [0, 0, 1]
         ])
 
-def is_identical_row(img1, img2):
-    """
-    Args:
-        같은 좌표에 올려져있는 두 개의 책장 행 이미지
-    """
-    assert img1.shape == img2.shape, "사이즈 다릅니당~"
-    mask1 = np.any(img1 != 0, axis=2)
-    mask2 = np.any(img2 != 0, axis=2)
-    iou = np.sum(mask1 * mask2) / np.sum(mask1 + mask2)
-    
-    mask = (mask1 * mask2).astype(np.uint8) # 0 or 1
-    mask = np.tile(np.expand_dims(mask, -1), 3)
-    img1_norm = normalize(img1 * mask)
-    img2_norm = normalize(img2 * mask)
-
-    diff = img1_norm - img2_norm
-    rms_diff = np.sqrt(np.sum(diff * diff) / (np.sum(mask) + 1e-6))
-
-    #print("iou = {}, rms_diff = {}".format(iou, rms_diff))
-    return iou > 0.1 and rms_diff < 0.75
-
 def match_row(
     row1: RowImage,
     row2: RowImage,
     thr_match_nms: float = 0.5,
-    thr_inlier_pixel: float = 1,
+    thr_inlier_pixel: float = 3,
     verbose: bool = False,
     ) -> (bool, np.ndarray):
     """
@@ -58,8 +31,8 @@ def match_row(
         thr_match_nms: Non Maximum Supression 할 때 필요한 값 (0~1, 작을수록 빡세게 supress 시키는거임)
         thr_inlier_pixel: Key Point 비교할 때 동일하다고 판단하기 위해 필요한 값 (0~inf)
     """
-    img1 = down_sampling(row1.img)
-    img2 = down_sampling(row2.img)
+    img1 = down_sampling(row1.img, down_sampling_rate)
+    img2 = down_sampling(row2.img, down_sampling_rate)
 
     if not hasattr(row1, "kp"):
         row1.kp, row1.des = get_kp_desc(img1)
@@ -85,7 +58,6 @@ def match_row(
     img1_on_2 = warp_image(img1, img2, H_1_to_2)
 
     if verbose:
-        #cv2.imshow("img1_on_2_target", down_sampling(warp_image(row1.img, row2.img, H_1_to_2), 8))
         cv2.imshow("img1_on_2", img1_on_2)
         cv2.imshow("img2", img2)
         cv2.waitKey(0)
@@ -93,7 +65,7 @@ def match_row(
     # undo down sampling
     H_1_to_2 = scale_matrix(down_sampling_rate) @ H_1_to_2 @ scale_matrix(1/down_sampling_rate)
 
-    return is_identical_row(img1_on_2, img2), H_1_to_2
+    return is_identical_image(img1_on_2, img2, thr_iou=0.1, thr_rms_diff=0.75), H_1_to_2
 
 def fill_matching_info(row_image_list):
     """
@@ -112,7 +84,7 @@ def fill_matching_info(row_image_list):
     horizontal_relation_table = [[None for _ in range(len(row_image_list))] for _ in range(len(row_image_list))] # 방향그래프 인접 테이블 // row_image{i}를 row_image{j}의 좌표계 위로 옮기는 homography H = Edge(i,j)
 
     # extract info. from matching image-pairs...
-    for i in tqdm(range(len(row_image_list))):
+    for i in range(len(row_image_list)):
         for j in range(i):
             row_i = row_image_list[i]
             row_j = row_image_list[j]
