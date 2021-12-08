@@ -110,7 +110,7 @@ def convert_to_book_group_list(book_list):
     return book_group_list
 
 
-def save_plt_grid_books(book_group_list, filename="grid_books"):
+def save_plt_grid_books(book_group_list, filename="grid_books", vanished_coord=None, moved_coord=None):
     grid_row = max([bg.position[0] for bg in book_group_list])
     grid_col = max([bg.position[1] for bg in book_group_list])
 
@@ -118,6 +118,15 @@ def save_plt_grid_books(book_group_list, filename="grid_books"):
     for bg in book_group_list:
         i, j = bg.position
         plt.subplot(grid_row, grid_col, (i-1) * grid_col + j)
-        plt.imshow(bg.get_first().rect()[0])
+        img = bg.get_first().rect()[0]
+        pad = int(0.03 * img.shape[0]) 
+        if vanished_coord != None and bg.position in vanished_coord:
+            imgPad = cv2.copyMakeBorder(img, pad, pad, pad, pad, cv2.BORDER_CONSTANT, None, (255, 0, 0))
+            plt.imshow(imgPad)
+        elif moved_coord != None and bg.position in moved_coord:
+            imgPad = cv2.copyMakeBorder(img, pad, pad, pad, pad, cv2.BORDER_CONSTANT, None, (0, 255, 0))
+            plt.imshow(imgPad)
+        else:
+            plt.imshow(img)
         plt.axis('off')
     plt.savefig(f"log/{filename}.jpeg", bbox_inches="tight", pad_inches=0)
