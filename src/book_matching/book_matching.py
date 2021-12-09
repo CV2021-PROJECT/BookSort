@@ -4,7 +4,7 @@ sys.path.append("..")
 from helpers import *
 from models import *
 
-down_sampling_rate = 2
+down_sampling_rate = 1
 
 
 def match_book_in_row(
