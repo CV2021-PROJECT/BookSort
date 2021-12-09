@@ -142,6 +142,60 @@ def compare_book_order(bg_list_before, bg_list_after):
 
     return trajectory_list
     
+def find_valid_trajectory(trajectory_list):
+
+    # extract valid changes from raw trajectory
+    # longest common subsequence
+    
+    delete_index = []
+
+    max_row = 0
+    for traj in trajectory_list:
+        if traj.bg_before != None and traj.bg_after != None:
+            max_row = max(traj.bg_before.position[0], max_row)
+            max_row = max(traj.bg_after.position[0], max_row)
+    
+    for index in range(1, max_row + 1):
+        max_index_b = 0
+        max_index_a = 0
+        for traj in trajectory_list:
+            if traj.bg_before != None and traj.bg_after != None and \
+                traj.bg_before.position[0] == index and traj.bg_after.position[0] == index:
+
+                max_index_b = max(max_index_b, traj.bg_before.position[1])
+                max_index_a = max(max_index_a, traj.bg_after.position[1])
+        
+        match = np.zeros(max_index_b + 1, dtype=np.int)
+        match_index = np.zeros(max_index_b + 1, dtype=np.int)
+        for i, traj in enumerate(trajectory_list):
+            if traj.bg_before != None and traj.bg_after != None and \
+                traj.bg_before.position[0] == index and traj.bg_after.position[0] == index:
+                
+                match[traj.bg_before.position[1]] = traj.bg_after.position[1]
+                match_index[traj.bg_before.position[1]] = i
+
+        lcs = np.zeros((max_index_b + 1, max_index_a + 1), dtype=np.int)
+        for i in range(1, max_index_b + 1):
+            for j in range(1, max_index_a + 1):
+                lcs[i, j] = max(lcs[i-1, j], lcs[i, j-1])
+                lcs[i, j] = max(lcs[i, j], lcs[i-1, j-1] + (match[i] == j))
+        
+        i = max_index_b
+        j = max_index_a
+
+        while i > 0 and j > 0:
+            if lcs[i, j] == lcs[i-1, j-1] + (match[i] == j):
+                if match[i] == j:
+                    delete_index.append(match_index[i])
+                i, j = i-1, j-1
+            elif lcs[i, j] == lcs[i-1, j]:
+                i = i-1
+            else:
+                j = j-1
+
+    new_trajectory_list = [traj for i, traj in enumerate(trajectory_list) if i not in delete_index]
+    return new_trajectory_list
+
 
 
 data_dir = os.path.join(os.path.dirname(__file__), "data")
@@ -156,5 +210,26 @@ bg_list_before = get_books_from_directory(source_before_dir, log_prefix="before"
 bg_list_after = get_books_from_directory(source_after_dir, log_prefix="after", verbose=False)
 
 trajectory_list = compare_book_order(bg_list_before, bg_list_after)
-for t in trajectory_list:
-    print(t)
+# for traj in trajectory_list:
+#    print(traj)
+
+valid_trajectory_list = find_valid_trajectory(trajectory_list)
+
+vanished_coord_before = []
+vanished_coord_after = []
+moved_coord_before = []
+moved_coord_after = []
+
+for traj in valid_trajectory_list:
+    print(traj)
+    if traj.bg_before != None and traj.bg_after != None: 
+        moved_coord_before.append(traj.bg_before.position)
+        moved_coord_after.append(traj.bg_after.position)
+    elif traj.bg_before == None:
+        vanished_coord_after.append(traj.bg_after.position)
+    else:
+        vanished_coord_before.append(traj.bg_before.position)
+
+save_plt_grid_books(bg_list_before, filename=f"match_before_book_grid", vanished_coord=vanished_coord_before, moved_coord=moved_coord_before)
+save_plt_grid_books(bg_list_after, filename=f"match_after_book_grid", vanished_coord=vanished_coord_after, moved_coord=moved_coord_after)
+
